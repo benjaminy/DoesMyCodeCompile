@@ -45,10 +45,21 @@ add_form.onsubmit = function( evt )
     }
 }
 
-submit_form.onsubmit = function( evt )
+var submission_in_progress = false;
+
+function got_check_id()
 {
-    console.log( evt );
-    evt.preventDefault();
+    console.log( "GOT IT" );
+    console.log( this );
+    if( this.status === 200 )
+    {
+        // File(s) uploaded.
+        // uploadButton.innerHTML = 'Upload';
+    }
+    else
+    {
+        alert('An error occurred!');
+    }
 
     var formData = new FormData();
     for( var i = 0; i < file_box.childNodes.length; i++ )
@@ -57,23 +68,16 @@ submit_form.onsubmit = function( evt )
         console.log( file_box.childNodes[i] );
         formData.append( 'photos[]', elem.actual_file, elem.actual_file.name );
     }
+}
 
-    // Set up the request.
-    var xhr = new XMLHttpRequest();
-    // Open the connection.
-    xhr.open('POST', 'handler.php', true);
+submit_form.onsubmit = function( evt )
+{
+    console.log( evt );
+    evt.preventDefault();
 
-    // Set up a handler for when the request finishes.
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            // File(s) uploaded.
-            uploadButton.innerHTML = 'Upload';
-        } else {
-            alert('An error occurred!');
-        }
-    };
-
-    // Send the Data.
-    xhr.send(formData);
-    
+    var submission_in_progress = true;
+    var new_req = new XMLHttpRequest();
+    new_req.open( 'GET', 'new_req.php?file_count='+file_box.childNodes.length );
+    new_req.onload = got_check_id;
+    new_req.send();
 }
