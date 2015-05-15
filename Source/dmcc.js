@@ -59,8 +59,10 @@ function got_check_id()
     else
     {
         alert('An error occurred!');
+        return;
     }
 
+    
     var formData = new FormData();
     for( var i = 0; i < file_box.childNodes.length; i++ )
     {
