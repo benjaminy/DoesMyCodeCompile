@@ -83,3 +83,7 @@ submit_form.onsubmit = function( evt )
     new_req.onload = got_check_id;
     new_req.send();
 }
+
+function loadDMCC()
+{
+}
