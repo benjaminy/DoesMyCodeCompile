@@ -1,3 +1,5 @@
+var tag_filter  = document.getElementById( 'tag_filter' );
+var builds_div  = document.getElementById( 'builds' );
 var add_form    = document.getElementById( 'add_form' );
 var submit_form = document.getElementById( 'submit_form' );
 var file_input  = document.getElementById( 'file_input' );
@@ -28,6 +30,49 @@ function logFields( path, obj, objs )
     {
         console.log( path + " > " + obj );
     }
+}
+
+function loadDMCC()
+{
+    var builds_req = new XMLHttpRequest();
+    builds_req.addEventListener( "progress", buildsProgress, false );
+    builds_req.addEventListener( "load",     buildsComplete, false );
+    builds_req.addEventListener( "error",    buildsFailed,   false );
+    builds_req.addEventListener( "abort",    buildsCanceled, false );
+    builds_req.open( "get", "build_rules.json" );
+    builds_req.send();
+}
+
+// progress on transfers from the server to the client (downloads)
+function buildsProgress( evt ) {
+    if( evt.lengthComputable ) {
+        var percentComplete = evt.loaded / evt.total;
+        // ...
+        console.log( percentComplete );
+    }
+    else {
+        // Unable to compute progress information since the total size is unknown
+    }
+}
+
+function buildsComplete( evt ) {
+    alert( "The transfer is complete." );
+    console.log( evt );
+    console.log( this );
+    builds = JSON.parse( this.responseText );
+    console.log( builds );
+//     <input name="year" type="radio" value="D" onclick="alert('CS1')">
+// <input name="year" type="radio" value="E" onclick="alert('CS2')">
+// <input name="year" type="radio" value="F" onclick="alert('CS3')">
+
+}
+
+function buildsFailed( evt ) {
+    alert("An error occurred while transferring the file.");
+}
+
+function buildsCanceled( evt ) {
+    alert("The transfer has been canceled by the user.");
 }
 
 add_form.onsubmit = function( evt )
@@ -82,8 +127,4 @@ submit_form.onsubmit = function( evt )
     new_req.open( 'GET', 'new_req.php?file_count='+file_box.childNodes.length );
     new_req.onload = got_check_id;
     new_req.send();
-}
-
-function loadDMCC()
-{
 }

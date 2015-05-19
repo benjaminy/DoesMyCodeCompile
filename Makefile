@@ -1,2 +1,16 @@
-build_index:
-	echo "foo"
+FILES_TO_SERVE=index.html dmcc.js
+
+all: $(addprefix Deploy/, $(FILES_TO_SERVE)) Deploy/build_rules.json
+
+Deploy/build_rules.json: Source/process_build_rules.sh
+	cd Source && ./process_build_rules.sh > ../$@
+
+Deploy/%: Source/%
+	cp $< $@
+
+run_server: all
+	cd Deploy && php -S localhost:8081
+
+clean:
+	rm -f $(addprefix Deploy/, $(FILES_TO_SERVE))
+	rm -f Deploy/build_rules.json

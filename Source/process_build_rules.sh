@@ -1,49 +1,69 @@
 #!/usr/bin/env bash
 
+LOG_FILE="build_rules.log"
 RULES_DIR="../BuildRules"
 DEPLOY_DIR="../Deploy"
 ALL_RULES=$DEPLOY_DIR/"build_rules.json"
 
-echo "[" > $ALL_RULES
+echo "Processing build rules" > $LOG_FILE
+
+echo "["
 
 FIRST_RULE=1
 
-# WARNING: Spaces in filenames probably creates problems here
-for RULES_FILE in $(find $RULES_DIR -type f); do
-    echo "Processing Makefile $RULES_FILE ..."
+function stupid_no_trailing_comma_in_json() {
+    if [ $1 -eq 0 ]; then
+        echo ","
+    fi
+}
 
-    if [ $FIRST_RULE -eq 0 ]; then
-        echo "," >> $ALL_RULES
-    fi
+function check_makefile_for_target() {
+    make -q -f $1 -s $2 > /dev/null 2>&1
+    echo $?
+}
+
+# WARNING: Spaces in filenames probably creates problems here
+find $RULES_DIR -type f | while read -r RULES_FILE; do
+    echo "Processing Makefile $RULES_FILE ..." >> $LOG_FILE
+
+    stupid_no_trailing_comma_in_json $FIRST_RULE
     FIRST_RULE=0
-    echo "  {" >> $ALL_RULES
+
+    echo "  {"
     PATH_NO_PREFIX=${RULES_FILE#$RULES_DIR/}
-    echo -n "    path: $PATH_NO_PREFIX" >> $ALL_RULES
-    make -q -f $RULES_FILE -s tags > /dev/null 2>&1
-    TAGS_CODE=$?
+    echo -n "    \"path\": \"$PATH_NO_PREFIX\""
+
+    TAGS_CODE=$(check_makefile_for_target $RULES_FILE "tags")
     if [ "$TAGS_CODE" == "1" ]; then
-        echo "," >> $ALL_RULES
-        echo "    tags: [" >> $ALL_RULES
+        echo ","
+        echo "    \"tags\": ["
         FIRST_TAG=1
-        for TAG in $(make -f $RULES_FILE -s tags); do
-            if [ $FIRST_TAG -eq 0 ]; then
-                echo "," >> $ALL_RULES
-            fi
+        make -f $RULES_FILE -s tags | while read -r TAG; do
+            stupid_no_trailing_comma_in_json $FIRST_TAG
             FIRST_TAG=0
-            echo -n "      \"$TAG\"" >> $ALL_RULES
+            echo -n "      \"$TAG\""
         done
-        echo "" >> $ALL_RULES
-        echo "    ]" >> $ALL_RULES
+        echo ""
+        echo -n "    ]"
     fi
-    make -q -f $RULES_FILE -s targets > /dev/null 2>&1
-    TARGETS_CODE=$?
+
+    TARGETS_CODE=$(check_makefile_for_target $RULES_FILE "targets")
     if [ "$TARGETS_CODE" == "1" ]; then
-        for TARGET in $(make -f $RULES_FILE -s targets); do
-            echo "Target $TARGET"
+        echo ","
+        echo "    \"targets\": ["
+        FIRST_TARGET=1
+        make -f $RULES_FILE -s targets | while read -r TARGET; do
+            stupid_no_trailing_comma_in_json $FIRST_TARGET
+            FIRST_TARGET=0
+            echo -n "      \"$TARGET\""
         done
+        echo ""
+        echo -n "    ]"
     fi
-    echo -n "  }" >> $ALL_RULES
+
+    echo ""
+    echo -n "  }"
 done
 
-echo "" >> $ALL_RULES
-echo "]" >> $ALL_RULES
+echo ""
+echo "]"

@@ -6,14 +6,10 @@
 <body onload="loadDMCC()">
 <h1>Does My Code Compile?</h1>
 
-<input name="year" type="radio" value="A" onclick="alert('g2014-2015')">
-<input name="year" type="radio" value="B" onclick="alert('g2015-2016')">
-<input name="year" type="radio" value="C" onclick="alert('g2016-2017')">
+<p>Filter projects/exercises/assignments by tags:</p>
+<input id="tag_filter" type="text" value="" onchange="alert('g2014-2015')">
 
-<div id="g2016-2017">
-<input name="year" type="radio" value="D" onclick="alert('CS1')">
-<input name="year" type="radio" value="E" onclick="alert('CS2')">
-<input name="year" type="radio" value="F" onclick="alert('CS3')">
+<div id="builds">
 </div>
 
 <form id="add_form" action="ERROR_DO_NOT_SUBMIT_FORM" method="POST">
