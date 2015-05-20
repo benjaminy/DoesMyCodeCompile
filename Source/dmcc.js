@@ -24,7 +24,8 @@ function buildsProgress( evt ) {
     if( evt.lengthComputable ) {
         var percentComplete = evt.loaded / evt.total;
         // console.log( percentComplete );
-        builds_div.innerHTML = "Retrieving build rules. "+percentComplete+"%";
+        builds_div.innerHTML = "Retrieving build rules. "+
+            ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
     }
     else {
         builds_div.innerHTML = "Retrieving build rules. ???%";
@@ -32,7 +33,7 @@ function buildsProgress( evt ) {
 }
 
 function buildsComplete( evt ) {
-    alert( "The transfer is complete." );
+    console.log( "The transfer is complete." );
     console.log( evt );
     console.log( this );
     builds = JSON.parse( this.responseText );
@@ -40,11 +41,19 @@ function buildsComplete( evt ) {
     removeAllChildren( builds_div );
     for( var i = 0; i < builds.length; i++ )
     {
+        var id = "build_rule_"+i;
+        var lelem = document.createElement( "label" );
+        lelem.for = id;
+        lelem.className = "build-item";
+        builds_div.appendChild( lelem );
         var ielem = document.createElement( "input" );
-        ielem.type = "radio";
-        ielem.name = "build_rule";
-        ielem.value = builds[i].path;
-        builds_div.appendChild( ielem );
+        ielem.id    = id;
+        ielem.type  = "radio";
+        ielem.name  = "build_rule";
+        lelem.appendChild( ielem );
+        var selem = document.createElement( "span" );
+        selem.innerHTML = builds[i].path;
+        lelem.appendChild( selem );
         console.log( ielem );
     }
 

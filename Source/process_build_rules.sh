@@ -5,11 +5,20 @@ RULES_DIR="../BuildRules"
 DEPLOY_DIR="../Deploy"
 ALL_RULES=$DEPLOY_DIR/"build_rules.json"
 
-echo "Processing build rules" > $LOG_FILE
+# TODO: The purpose of the next few lines is to figure out if there are
+# any new makefiles to process.  Can we get make to do this somehow?
+MOST_RECENT_RULE=$(find $RULES_DIR -type f -print0 | xargs -0 stat -f "%m %N" | sort -rn | head -1 | cut -f1 -d" ")
+ALL_RULES_TIME=$(stat -f "%m %N" $ALL_RULES | cut -f1 -d" ")
 
-echo "["
+# >&2 echo "Dir: $MOST_RECENT_RULE   File: $ALL_RULES_TIME"
 
-FIRST_RULE=1
+if [ $ALL_RULES_TIME -gt $MOST_RECENT_RULE ]; then
+    echo "Build rules up-to-date." > $LOG_FILE
+    cat $ALL_RULES
+    exit 0
+else
+    echo "More recent build rule. Updating." > $LOG_FILE
+fi
 
 function stupid_no_trailing_comma_in_json() {
     if [ $1 -eq 0 ]; then
@@ -21,6 +30,10 @@ function check_makefile_for_target() {
     make -q -f $1 -s $2 > /dev/null 2>&1
     echo $?
 }
+
+echo "["
+
+FIRST_RULE=1
 
 # WARNING: Spaces in filenames probably creates problems here
 find $RULES_DIR -type f | while read -r RULES_FILE; do

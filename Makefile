@@ -1,9 +1,9 @@
-FILES_TO_SERVE=index.html dmcc.js
+FILES_TO_SERVE=index.html dmcc.js dmcc.css
 
 all: $(addprefix Deploy/, $(FILES_TO_SERVE)) Deploy/build_rules.json
 
 Deploy/build_rules.json: Source/process_build_rules.sh
-	cd Source && ./process_build_rules.sh > ../$@
+	cd Source && ./process_build_rules.sh > ../$@.tmp && mv ../$@.tmp ../$@
 
 Deploy/%: Source/%
 	cp $< $@

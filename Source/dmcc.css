@@ -1,0 +1,33 @@
+#filter_box {
+    margin: 5px;
+    padding: 5px;
+    background-color: #DFFFFF;
+}
+
+#builds {
+    margin: 5px;
+    padding: 5px;
+    background-color: #FFDFFF;
+}
+
+#submission-box {
+    margin: 5px;
+    padding: 5px;
+    background-color: #FFFFDF;
+}
+
+.container {
+    display: flex;
+}
+
+.fixed {
+    width: 300px;
+}
+
+.flex-item {
+    flex-grow: 1;
+}
+
+.build-item {
+    display: block;
+}
