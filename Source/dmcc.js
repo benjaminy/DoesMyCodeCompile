@@ -7,33 +7,9 @@ var add_btn     = document.getElementById( 'add_files_btn' );
 var submit_btn  = document.getElementById( 'submit_files_btn' );
 var file_box    = document.getElementById( 'file_container' );
 
-function logFields( path, obj, objs )
-{
-    if( obj !== null && typeof( obj ) === 'object' )
-    {
-        if( objs.indexOf( obj ) > -1 )
-        {
-            return;
-        }
-        objs.push( obj );
-        for( field in obj )
-        {
-            try {
-                logFields( path + "." + field, obj[ field ], objs );
-            }
-            catch( e ) {
-                console.log( path + "." + field + " MISSING" );
-            }
-        }
-    }
-    else
-    {
-        console.log( path + " > " + obj );
-    }
-}
-
 function loadDMCC()
 {
+    builds_div.innerHTML = "Retrieving build rules. 0%";
     var builds_req = new XMLHttpRequest();
     builds_req.addEventListener( "progress", buildsProgress, false );
     builds_req.addEventListener( "load",     buildsComplete, false );
@@ -47,11 +23,11 @@ function loadDMCC()
 function buildsProgress( evt ) {
     if( evt.lengthComputable ) {
         var percentComplete = evt.loaded / evt.total;
-        // ...
-        console.log( percentComplete );
+        // console.log( percentComplete );
+        builds_div.innerHTML = "Retrieving build rules. "+percentComplete+"%";
     }
     else {
-        // Unable to compute progress information since the total size is unknown
+        builds_div.innerHTML = "Retrieving build rules. ???%";
     }
 }
 
@@ -61,8 +37,17 @@ function buildsComplete( evt ) {
     console.log( this );
     builds = JSON.parse( this.responseText );
     console.log( builds );
-//     <input name="year" type="radio" value="D" onclick="alert('CS1')">
-// <input name="year" type="radio" value="E" onclick="alert('CS2')">
+    removeAllChildren( builds_div );
+    for( var i = 0; i < builds.length; i++ )
+    {
+        var ielem = document.createElement( "input" );
+        ielem.type = "radio";
+        ielem.name = "build_rule";
+        ielem.value = builds[i].path;
+        builds_div.appendChild( ielem );
+        console.log( ielem );
+    }
+
 // <input name="year" type="radio" value="F" onclick="alert('CS3')">
 
 }
@@ -127,4 +112,39 @@ submit_form.onsubmit = function( evt )
     new_req.open( 'GET', 'new_req.php?file_count='+file_box.childNodes.length );
     new_req.onload = got_check_id;
     new_req.send();
+}
+
+/* Misc utils */
+
+function removeAllChildren( elem )
+{
+    while( elem.firstChild )
+    {
+        elem.removeChild( elem.firstChild );
+    }
+}
+
+function logFields( path, obj, objs )
+{
+    if( obj !== null && typeof( obj ) === 'object' )
+    {
+        if( objs.indexOf( obj ) > -1 )
+        {
+            return;
+        }
+        objs.push( obj );
+        for( field in obj )
+        {
+            try {
+                logFields( path + "." + field, obj[ field ], objs );
+            }
+            catch( e ) {
+                console.log( path + "." + field + " MISSING" );
+            }
+        }
+    }
+    else
+    {
+        console.log( path + " > " + obj );
+    }
 }
