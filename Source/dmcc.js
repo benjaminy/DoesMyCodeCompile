@@ -32,6 +32,19 @@ function buildsProgress( evt ) {
     }
 }
 
+function buildsFailed( evt ) {
+    alert("An error occurred while transferring the file.");
+}
+
+function buildsCanceled( evt ) {
+    alert("The transfer has been canceled by the user.");
+}
+
+function makeBuildSelectionCallback( elem )
+{
+    return function() { buildSelected( elem ); }
+}
+
 function buildsComplete( evt ) {
     console.log( "The transfer is complete." );
     console.log( evt );
@@ -45,28 +58,28 @@ function buildsComplete( evt ) {
         var lelem = document.createElement( "label" );
         lelem.for = id;
         lelem.className = "build-item";
-        builds_div.appendChild( lelem );
         var ielem = document.createElement( "input" );
         ielem.id    = id;
         ielem.type  = "radio";
         ielem.name  = "build_rule";
-        lelem.appendChild( ielem );
+        ielem.build_path = builds[i].path;
+        ielem.addEventListener( "click", makeBuildSelectionCallback( ielem ) );
         var selem = document.createElement( "span" );
         selem.innerHTML = builds[i].path;
+
+        builds_div.appendChild( lelem );
+        lelem.appendChild( ielem );
         lelem.appendChild( selem );
-        console.log( ielem );
     }
 
 // <input name="year" type="radio" value="F" onclick="alert('CS3')">
 
 }
 
-function buildsFailed( evt ) {
-    alert("An error occurred while transferring the file.");
-}
-
-function buildsCanceled( evt ) {
-    alert("The transfer has been canceled by the user.");
+function buildSelected( elem )
+{
+    console.log( elem.build_path );
+    console.log( this );
 }
 
 add_form.onsubmit = function( evt )
