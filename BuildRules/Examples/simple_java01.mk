@@ -6,3 +6,7 @@ tags:
 targets:
 	echo "compile"
 
+compile: a.java b.java blah
+	javac $<
+
+blah: c.java

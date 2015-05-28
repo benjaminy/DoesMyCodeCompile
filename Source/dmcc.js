@@ -40,11 +40,6 @@ function buildsCanceled( evt ) {
     alert("The transfer has been canceled by the user.");
 }
 
-function makeBuildSelectionCallback( elem )
-{
-    return function() { buildSelected( elem ); }
-}
-
 function buildsComplete( evt ) {
     console.log( "The transfer is complete." );
     console.log( evt );
@@ -74,6 +69,11 @@ function buildsComplete( evt ) {
 
 // <input name="year" type="radio" value="F" onclick="alert('CS3')">
 
+}
+
+function makeBuildSelectionCallback( elem )
+{
+    return function() { buildSelected( elem ); }
 }
 
 function buildSelected( elem )

@@ -2,11 +2,12 @@
 
 import sys
 import os
+import subprocess
 
 LOG_FILE   = open( "build_rules.log", "w" )
 RULES_DIR  = "../BuildRules"
 DEPLOY_DIR = "../Deploy"
-ALL_RULES  = DEPLOY_DIR + "/build_rules.json"
+RULES_INFO = DEPLOY_DIR + "/build_rules.json"
 
 # TODO: The purpose of the next few lines is to figure out if there are
 # any new makefiles to process.  Can we get make to do this somehow?
@@ -28,14 +29,14 @@ def mostRecentTimestampInTree( f, filt ):
         # Interesting. What is f?
         return None
 
-MOST_RECENT_RULE = mostRecentTimestampInTree $RULES_DIR
-ALL_RULES_TIME   = os.path.getmtime( ALL_RULES )
+MOST_RECENT_RULE = mostRecentTimestampInTree( RULES_DIR )
+RULES_INFO_TIME  = os.path.getmtime( RULES_INFO )
 
-# >&2 echo "Dir: $MOST_RECENT_RULE   File: $ALL_RULES_TIME"
+# >&2 echo "Dir: $MOST_RECENT_RULE   File: $RULES_INFO_TIME"
 
-if ALL_RULES_TIME >= MOST_RECENT_RULE:
+if RULES_INFO_TIME >= MOST_RECENT_RULE:
     print( "Build rules up-to-date.", file=LOG_FILE )
-    for line in open( ALL_RULES ):
+    for line in open( RULES_INFO ):
         print line,
     sys.exit( 0 )
 else:
@@ -46,8 +47,10 @@ def stupid_no_trailing_comma_in_json( first ):
         print( "," )
 
 def check_makefile_for_target( mkfile, target ):
-    make -q -f $1 -s $2 > /dev/null 2>&1
-    echo $?
+    m = [ "make", "-q", "-s", "-f", mkfile, target ]
+    process = subprocess.Popen( m, stdout=PIPE )
+    (output, err) = process.communicate()
+    return process.wait()
 
 print( "[" )
 
