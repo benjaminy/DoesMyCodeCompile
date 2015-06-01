@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -13,31 +13,42 @@ RULES_INFO = DEPLOY_DIR + "/build_rules.json"
 # any new makefiles to process.  Can we get make to do this somehow?
 
 def mostRecentTimestampInTree( f, filt ):
+    # print( f + str( type( f ) ) )
     if os.path.isfile( f ):
+        # print( "Is file" )
         if filt( f ):
             return os.path.getmtime( f )
         else:
             return None
     elif os.path.isdir( f ):
+        # print( "Is dir" )
         most_recent = None
         for f2 in os.listdir( f ):
-            f2_recent = mostReventTimestamp( f2, filt )
+            f2_recent = mostRecentTimestampInTree(
+                os.path.join( f, f2 ), filt )
             if most_recent is None or f2_recent > most_recent:
                 most_recent = f2_recent
         return most_recent
     else:
+        print( "Is SOMETHING ELSE" )
         # Interesting. What is f?
         return None
 
-MOST_RECENT_RULE = mostRecentTimestampInTree( RULES_DIR )
+def mkSuffix( f ):
+    return os.path.basename( f ).endswith( ".mk" )
+    
+MOST_RECENT_RULE = mostRecentTimestampInTree( RULES_DIR, mkSuffix )
 RULES_INFO_TIME  = os.path.getmtime( RULES_INFO )
 
 # >&2 echo "Dir: $MOST_RECENT_RULE   File: $RULES_INFO_TIME"
 
+print( RULES_INFO_TIME )
+print( MOST_RECENT_RULE )
+
 if RULES_INFO_TIME >= MOST_RECENT_RULE:
     print( "Build rules up-to-date.", file=LOG_FILE )
     for line in open( RULES_INFO ):
-        print line,
+        print( line, end="" )
     sys.exit( 0 )
 else:
     print( "More recent build rule. Updating.", file=LOG_FILE )
@@ -49,7 +60,7 @@ def stupid_no_trailing_comma_in_json( first ):
 def check_makefile_for_target( mkfile, target ):
     m = [ "make", "-q", "-s", "-f", mkfile, target ]
     process = subprocess.Popen( m, stdout=PIPE )
-    (output, err) = process.communicate()
+    ( output, err ) = process.communicate()
     return process.wait()
 
 print( "[" )
