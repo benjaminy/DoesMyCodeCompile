@@ -18,7 +18,7 @@ def mostRecentTimestampInTree( f, filt ):
             return os.path.getmtime( f )
         else:
             return None
-    else if os.path.isdir( f ):
+    elif os.path.isdir( f ):
         most_recent = None
         for f2 in os.listdir( f ):
             f2_recent = mostReventTimestamp( f2, filt )
@@ -56,50 +56,74 @@ print( "[" )
 
 ##### Cursor
 
-FIRST_RULE=1
+FIRST_RULE = True
 
-# WARNING: Spaces in filenames probably creates problems here
-find $RULES_DIR -type f | while read -r RULES_FILE; do
-    echo "Processing Makefile $RULES_FILE ..." >> $LOG_FILE
+def crawl( f, tags ):
+    # TODO: Ignore Examples directory
+    filename = os.path.basename( f )
+    name_parts = filename.split( "_" );
+    if len( name_parts ) > 1:
+        kind = name_parts[0]
+        tag_value = kind.join( " " )
+    else:
+        kind = ""
+        tag_value = name_parts[0]
+    if os.path.isfile( f ):
+        if not name.endswith( ".mk" ):
+            return
+        print( "Processing Makefile %s ..." % f, file=LOG_FILE )
 
-    stupid_no_trailing_comma_in_json $FIRST_RULE
-    FIRST_RULE=0
+        stupid_no_trailing_comma_in_json( FIRST_RULE )
+        FIRST_RULE = False
+        print( "  {" )
 
-    echo "  {"
-    PATH_NO_PREFIX=${RULES_FILE#$RULES_DIR/}
-    echo -n "    \"path\": \"$PATH_NO_PREFIX\""
+    elif os.path.isdir( f ):
+        most_recent = None
+        for f2 in os.listdir( f ):
+            crawl( f2, filt )
+        return most_recent
+    else:
+        # Interesting. What is f?
+        return None
 
-    TAGS_CODE=$(check_makefile_for_target $RULES_FILE "tags")
-    if [ "$TAGS_CODE" == "1" ]; then
-        echo ","
-        echo "    \"tags\": ["
-        FIRST_TAG=1
-        make -f $RULES_FILE -s tags | while read -r TAG; do
-            stupid_no_trailing_comma_in_json $FIRST_TAG
-            FIRST_TAG=0
-            echo -n "      \"$TAG\""
-        done
-        echo ""
-        echo -n "    ]"
-    fi
+# # WARNING: Spaces in filenames probably creates problems here
+# find $RULES_DIR -type f | while read -r RULES_FILE; do
 
-    TARGETS_CODE=$(check_makefile_for_target $RULES_FILE "targets")
-    if [ "$TARGETS_CODE" == "1" ]; then
-        echo ","
-        echo "    \"targets\": ["
-        FIRST_TARGET=1
-        make -f $RULES_FILE -s targets | while read -r TARGET; do
-            stupid_no_trailing_comma_in_json $FIRST_TARGET
-            FIRST_TARGET=0
-            echo -n "      \"$TARGET\""
-        done
-        echo ""
-        echo -n "    ]"
-    fi
 
-    echo ""
-    echo -n "  }"
-done
+#     PATH_NO_PREFIX=${RULES_FILE#$RULES_DIR/}
+#     echo -n "    \"path\": \"$PATH_NO_PREFIX\""
 
-echo ""
-echo "]"
+#     TAGS_CODE=$(check_makefile_for_target $RULES_FILE "tags")
+#     if [ "$TAGS_CODE" == "1" ]; then
+#         echo ","
+#         echo "    \"tags\": ["
+#         FIRST_TAG=1
+#         make -f $RULES_FILE -s tags | while read -r TAG; do
+#             stupid_no_trailing_comma_in_json $FIRST_TAG
+#             FIRST_TAG=0
+#             echo -n "      \"$TAG\""
+#         done
+#         echo ""
+#         echo -n "    ]"
+#     fi
+
+#     TARGETS_CODE=$(check_makefile_for_target $RULES_FILE "targets")
+#     if [ "$TARGETS_CODE" == "1" ]; then
+#         echo ","
+#         echo "    \"targets\": ["
+#         FIRST_TARGET=1
+#         make -f $RULES_FILE -s targets | while read -r TARGET; do
+#             stupid_no_trailing_comma_in_json $FIRST_TARGET
+#             FIRST_TARGET=0
+#             echo -n "      \"$TARGET\""
+#         done
+#         echo ""
+#         echo -n "    ]"
+#     fi
+
+#     echo ""
+#     echo -n "  }"
+# done
+
+# echo ""
+# echo "]"
