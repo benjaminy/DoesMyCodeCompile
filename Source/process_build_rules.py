@@ -9,6 +9,9 @@ RULES_DIR  = "../BuildRules"
 DEPLOY_DIR = "../Deploy"
 RULES_INFO = DEPLOY_DIR + "/build_rules.json"
 
+class GenericObject:
+    pass
+
 # TODO: The purpose of the next few lines is to figure out if there are
 # any new makefiles to process.  Can we get make to do this somehow?
 
@@ -36,7 +39,7 @@ def mostRecentTimestampInTree( f, filt ):
 
 def mkSuffix( f ):
     return os.path.basename( f ).endswith( ".mk" )
-    
+
 MOST_RECENT_RULE = mostRecentTimestampInTree( RULES_DIR, mkSuffix )
 RULES_INFO_TIME  = os.path.getmtime( RULES_INFO )
 
@@ -53,70 +56,43 @@ if RULES_INFO_TIME >= MOST_RECENT_RULE:
 else:
     print( "More recent build rule. Updating.", file=LOG_FILE )
 
-def stupid_no_trailing_comma_in_json( first ):
-    if not first:
-        print( "," )
-
-def check_makefile_for_target( mkfile, target ):
-    m = [ "make", "-q", "-s", "-f", mkfile, target ]
+def runMake( mkfile, target ):
+    m = [ "make", "-s", "-f", mkfile, target ]
     process = subprocess.Popen( m, stdout=PIPE )
     ( output, err ) = process.communicate()
-    return process.wait()
-
-print( "[" )
+    return ( process.wait(), output, err )
 
 ##### Cursor
 
-FIRST_RULE = True
+projects = []
 
-def crawl( f, tags ):
+def crawl( f, name, fname_tags ):
     # TODO: Ignore Examples directory
     filename = os.path.basename( f )
     name_parts = filename.split( "_" );
     if len( name_parts ) > 1:
         kind = name_parts[0]
-        tag_value = kind.join( " " )
+        tag_value = name_parts[1:].join( " " )
     else:
         kind = ""
         tag_value = name_parts[0]
+
     if os.path.isfile( f ):
-        if not name.endswith( ".mk" ):
+        if not mkSuffix( f ):
             return
         print( "Processing Makefile %s ..." % f, file=LOG_FILE )
 
-        stupid_no_trailing_comma_in_json( FIRST_RULE )
-        FIRST_RULE = False
-        print( "  {" )
+        proj = GenericObject()
+        proj.path = name
+        tags = []
+        for tag in fname_tags:
+            tags.push( tag )
+        ( has_tags, tags_output, tags_err ) = runMake( f, "tags" )
+        if has_tags == 0:
+            for tag in tags_output:
+                tags.push( tag )
+        proj.tags = tags
 
-    elif os.path.isdir( f ):
-        most_recent = None
-        for f2 in os.listdir( f ):
-            crawl( f2, filt )
-        return most_recent
-    else:
-        # Interesting. What is f?
-        return None
-
-# # WARNING: Spaces in filenames probably creates problems here
-# find $RULES_DIR -type f | while read -r RULES_FILE; do
-
-
-#     PATH_NO_PREFIX=${RULES_FILE#$RULES_DIR/}
-#     echo -n "    \"path\": \"$PATH_NO_PREFIX\""
-
-#     TAGS_CODE=$(check_makefile_for_target $RULES_FILE "tags")
-#     if [ "$TAGS_CODE" == "1" ]; then
-#         echo ","
-#         echo "    \"tags\": ["
-#         FIRST_TAG=1
-#         make -f $RULES_FILE -s tags | while read -r TAG; do
-#             stupid_no_trailing_comma_in_json $FIRST_TAG
-#             FIRST_TAG=0
-#             echo -n "      \"$TAG\""
-#         done
-#         echo ""
-#         echo -n "    ]"
-#     fi
 
 #     TARGETS_CODE=$(check_makefile_for_target $RULES_FILE "targets")
 #     if [ "$TARGETS_CODE" == "1" ]; then
@@ -131,6 +107,29 @@ def crawl( f, tags ):
 #         echo ""
 #         echo -n "    ]"
 #     fi
+
+
+
+    elif os.path.isdir( f ):
+        most_recent = None
+        for f2 in os.listdir( f ):
+            f_next = os.path.join( f, f2 )
+            name_next = os.path.join( name, f2 )
+            tags.append( ( kind, tag_value ) )
+            crawl( f_next, name_next, tags )
+            tags.pop()
+        return most_recent
+
+    else:
+        # Interesting. What is f?
+        return None
+
+# # WARNING: Spaces in filenames probably creates problems here
+# find $RULES_DIR -type f | while read -r RULES_FILE; do
+
+
+
+
 
 #     echo ""
 #     echo -n "  }"
