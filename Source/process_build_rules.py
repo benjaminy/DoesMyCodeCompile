@@ -3,14 +3,25 @@
 import sys
 import os
 import subprocess
+import json
+import shutils
 
 LOG_FILE   = open( "build_rules.log", "w" )
-RULES_DIR  = "../BuildRules"
-DEPLOY_DIR = "../Deploy"
-RULES_INFO = DEPLOY_DIR + "/build_rules.json"
+RULES_DIR  = os.path.join( "..", "BuildRules" )
+DEPLOY_DIR = os.path.join( "..", "Deploy" )
+MAKE_DIR   = os.path.join( "..", "Build", "Make" )
+RULES_INFO = os.path.join( DEPLOY_DIR, "build_rules.json" )
 
-class GenericObject:
+class EmptyObject:
     pass
+
+def clearMakeDir():
+    for fpart in os.listdir( MAKE_DIR ):
+        f = os.path.join( MAKE_DIR, fpart )
+        if os.path.isdir( f ):
+            shutils.rmtree( f, ignore_errors=True )
+        else if f != ".gitignore":
+            os.path.unlink( f )
 
 # TODO: The purpose of the next few lines is to figure out if there are
 # any new makefiles to process.  Can we get make to do this somehow?
@@ -29,7 +40,8 @@ def mostRecentTimestampInTree( f, filt ):
         for f2 in os.listdir( f ):
             f2_recent = mostRecentTimestampInTree(
                 os.path.join( f, f2 ), filt )
-            if most_recent is None or f2_recent > most_recent:
+            if ( ( not f2_recent is None ) and
+                 ( most_recent is None or f2_recent > most_recent ) ):
                 most_recent = f2_recent
         return most_recent
     else:
@@ -62,8 +74,6 @@ def runMake( mkfile, target ):
     ( output, err ) = process.communicate()
     return ( process.wait(), output, err )
 
-##### Cursor
-
 projects = []
 
 def crawl( f, name, fname_tags ):
@@ -76,13 +86,15 @@ def crawl( f, name, fname_tags ):
     else:
         kind = ""
         tag_value = name_parts[0]
+    fname_tags.append( ( kind, tag_value ) )
 
     if os.path.isfile( f ):
         if not mkSuffix( f ):
+            fname_tags.pop()
             return
         print( "Processing Makefile %s ..." % f, file=LOG_FILE )
 
-        proj = GenericObject()
+        proj = EmptyObject()
         proj.path = name
         tags = []
         for tag in fname_tags:
@@ -93,47 +105,26 @@ def crawl( f, name, fname_tags ):
                 tags.push( tag )
         proj.tags = tags
 
+        ( has_targs, targs_output, targs_err ) = runMake( f, "targets" )
+        targets = []
+        if has_targs == 0:
+            for target_name in targs_output:
+                target = EmptyObject()
+                target.name = target_name
+                clearMakeDir()
+                targets.push( target )
 
-#     TARGETS_CODE=$(check_makefile_for_target $RULES_FILE "targets")
-#     if [ "$TARGETS_CODE" == "1" ]; then
-#         echo ","
-#         echo "    \"targets\": ["
-#         FIRST_TARGET=1
-#         make -f $RULES_FILE -s targets | while read -r TARGET; do
-#             stupid_no_trailing_comma_in_json $FIRST_TARGET
-#             FIRST_TARGET=0
-#             echo -n "      \"$TARGET\""
-#         done
-#         echo ""
-#         echo -n "    ]"
-#     fi
-
-
+        projects.append( proj )
 
     elif os.path.isdir( f ):
-        most_recent = None
         for f2 in os.listdir( f ):
             f_next = os.path.join( f, f2 )
             name_next = os.path.join( name, f2 )
-            tags.append( ( kind, tag_value ) )
             crawl( f_next, name_next, tags )
-            tags.pop()
-        return most_recent
 
     else:
         # Interesting. What is f?
-        return None
+        pass
+    fname_tags.pop()
 
-# # WARNING: Spaces in filenames probably creates problems here
-# find $RULES_DIR -type f | while read -r RULES_FILE; do
-
-
-
-
-
-#     echo ""
-#     echo -n "  }"
-# done
-
-# echo ""
-# echo "]"
+print json.dumps( projects )

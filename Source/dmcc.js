@@ -11,36 +11,39 @@ function loadDMCC()
 {
     builds_div.innerHTML = "Retrieving build rules. 0%";
     var builds_req = new XMLHttpRequest();
-    builds_req.addEventListener( "progress", buildsProgress, false );
-    builds_req.addEventListener( "load",     buildsComplete, false );
-    builds_req.addEventListener( "error",    buildsFailed,   false );
-    builds_req.addEventListener( "abort",    buildsCanceled, false );
+    builds_req.addEventListener( "progress", buildsTxProgress, false );
+    builds_req.addEventListener( "load",     buildsTxComplete, false );
+    builds_req.addEventListener( "error",    buildsTxFailed,   false );
+    builds_req.addEventListener( "abort",    buildsTxCanceled, false );
     builds_req.open( "get", "build_rules.json" );
     builds_req.send();
 }
 
 // progress on transfers from the server to the client (downloads)
-function buildsProgress( evt ) {
-    if( evt.lengthComputable ) {
+function buildsTxProgress( evt )
+{
+    if( evt.lengthComputable )
+    {
         var percentComplete = evt.loaded / evt.total;
         // console.log( percentComplete );
         builds_div.innerHTML = "Retrieving build rules. "+
             ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
     }
-    else {
+    else
+    {
         builds_div.innerHTML = "Retrieving build rules. ???%";
     }
 }
 
-function buildsFailed( evt ) {
+function buildsTxFailed( evt ) {
     alert("An error occurred while transferring the file.");
 }
 
-function buildsCanceled( evt ) {
+function buildsTxCanceled( evt ) {
     alert("The transfer has been canceled by the user.");
 }
 
-function buildsComplete( evt ) {
+function buildsTxComplete( evt ) {
     console.log( "The transfer is complete." );
     console.log( evt );
     console.log( this );
