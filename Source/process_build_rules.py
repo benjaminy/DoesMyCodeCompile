@@ -76,9 +76,8 @@ def runMake( mkfile, target ):
 
 projects = []
 
-def crawl( f, name, fname_tags ):
+def crawl( full_path, app_path, filename, fname_tags ):
     # TODO: Ignore Examples directory
-    filename = os.path.basename( f )
     name_parts = filename.split( "_" );
     if len( name_parts ) > 1:
         kind = name_parts[0]
@@ -88,24 +87,30 @@ def crawl( f, name, fname_tags ):
         tag_value = name_parts[0]
     fname_tags.append( ( kind, tag_value ) )
 
-    if os.path.isfile( f ):
-        if not mkSuffix( f ):
+    if os.path.isdir( full_path ):
+        for f in os.listdir( full_path ):
+            crawl( os.path.join( full_path, f ),
+                   os.path.join( app_path, f ),
+                   f, fname_tags )
+
+    elif os.path.isfile( full_path ):
+        if not mkSuffix( filename ):
             fname_tags.pop()
             return
-        print( "Processing Makefile %s ..." % f, file=LOG_FILE )
+        print( "Processing Makefile %s ..." % app_path, file=LOG_FILE )
 
         proj = EmptyObject()
         proj.path = name
         tags = []
         for tag in fname_tags:
             tags.push( tag )
-        ( has_tags, tags_output, tags_err ) = runMake( f, "tags" )
+        ( has_tags, tags_output, tags_err ) = runMake( full_path, "tags" )
         if has_tags == 0:
             for tag in tags_output:
                 tags.push( tag )
         proj.tags = tags
 
-        ( has_targs, targs_output, targs_err ) = runMake( f, "targets" )
+        ( has_targs, targs_output, targs_err ) = runMake( full_path, "targets" )
         targets = []
         if has_targs == 0:
             for target_name in targs_output:
@@ -116,15 +121,10 @@ def crawl( f, name, fname_tags ):
 
         projects.append( proj )
 
-    elif os.path.isdir( f ):
-        for f2 in os.listdir( f ):
-            f_next = os.path.join( f, f2 )
-            name_next = os.path.join( name, f2 )
-            crawl( f_next, name_next, tags )
-
     else:
         # Interesting. What is f?
         pass
+
     fname_tags.pop()
 
 print json.dumps( projects )
