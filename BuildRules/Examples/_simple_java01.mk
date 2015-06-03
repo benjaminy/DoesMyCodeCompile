@@ -1,7 +1,7 @@
 tags:
 	echo "20x6"
 	echo "Super"
-	echo "cls:AI"
+	echo "cls_AI"
 
 targets:
 	echo "compile"
