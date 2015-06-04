@@ -101,9 +101,7 @@ def processMakefile( full_path, app_path, fname_tags ):
     print( "Processing Makefile %s ..." % app_path, file=LOG_FILE )
     # print( "Processing Makefile %s ..." % app_path )
 
-    proj = {}
-    # proj = EmptyObject()
-    proj[ "path" ] = app_path
+    proj = { 'path': app_path }
     tags = []
     for ( kind, tag_value ) in fname_tags:
         tags.append( { 'kind':kind, 'tag':tag_value } )
@@ -116,9 +114,7 @@ def processMakefile( full_path, app_path, fname_tags ):
     ( has_targs, targs_output, targs_err ) = runMake( full_path, "targets", [] )
     targets = []
     for target_name in ( targs_output.splitlines() if has_targs == 0 else [] ):
-        target = {}
-        # target = EmptyObject()
-        target[ "name" ] = target_name
+        target = { 'name': target_name }
         clearMakeDir()
         runMake( full_path, "init", [], cwd=MAKE_DIR )
         ( _, sOut, sErr ) = runMake(
@@ -141,7 +137,10 @@ def processMakefile( full_path, app_path, fname_tags ):
     projects.append( proj )
 
 def crawl( full_path, app_path, filename, fname_tags ):
-    # TODO: Ignore Examples directory
+    if app_path == "Examples" and False: # TODO: config
+        return
+
+    fname_tags = fname_tags[:]
     if filename != "":
         fname_tags.append( tag_foo( filename ) )
 
@@ -153,16 +152,11 @@ def crawl( full_path, app_path, filename, fname_tags ):
 
     elif os.path.isfile( full_path ):
         if not mkSuffix( filename ):
-            if filename != "":
-                fname_tags.pop()
             return
         processMakefile( full_path, app_path, fname_tags )
     else:
         # Interesting. What is f?
         pass
-
-    if filename != "":
-        fname_tags.pop()
 
 crawl( RULES_DIR, "", "", [] )
 

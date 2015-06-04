@@ -1,19 +1,29 @@
 #filter_box {
-    margin: 5px;
-    padding: 5px;
     background-color: #DFFFFF;
 }
 
-#builds {
-    margin: 5px;
-    padding: 5px;
+#projs {
     background-color: #FFDFFF;
 }
 
-#submission-box {
+#targets {
+    background-color: #FFDFDF;
+}
+
+#choose_files {
+    display: flex;
+    background-color: #FFFFDF;
+}
+
+#submit_files {
+    display: flex;
+    background-color: #DFFFFD;
+}
+
+
+.main_panel {
     margin: 5px;
     padding: 5px;
-    background-color: #FFFFDF;
 }
 
 .container {
@@ -28,6 +38,6 @@
     flex-grow: 1;
 }
 
-.build-item {
+.proj-item {
     display: block;
 }

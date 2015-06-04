@@ -7,24 +7,35 @@
 <body onload="loadDMCC()">
 <h1>Does My Code Compile?</h1>
 
-<div id="filter_box">
+<div class="main_panel" id="filter_box">
 <p>Filter projects/exercises/assignments by tags:</p>
 <input id="tag_filter" type="text" value="" onchange="alert('g2014-2015')">
 </div>
 
 <div class="container">
-  <div class="fixed" id="builds"></div>
-  <div class="flex-item" id="submission-box">
+
+  <div class="fixed main_panel" id="projs">Choose a project:
+    <div id="choose_proj"></div>
+  </div>
+
+  <div class="flex-item main_panel" id="targets">Choose a target:
+    <div id="choose_target"></div>
+  </div>
+
+  <div class="flex-item main_panel" id="choose_files">
     <form id="add_form" action="ERROR_DO_NOT_SUBMIT_FORM" method="POST">
       <input id="file_input" type="file" name="file[]" multiple>
-      <button id="add_files_btn" type="submit">Add Files to List</button>
+      <button id="add_files_btn" type="submit">Remember Files and Add More</button>
     </form>
+  </div>
 
+  <div class="flex-item main_panel" id="submit_files">
     <form id="submit_form" action="ERROR_DO_NOT_SUBMIT_FORM" method="POST">
       <div id="file_container"></div>
       <button id="submit_files_btn" type="submit">Submit Files</button>
     </form>
   </div>
+
 </div>
 
 <script type="text/javascript" src="dmcc.js"></script>

@@ -1,5 +1,6 @@
 var tag_filter  = document.getElementById( 'tag_filter' );
-var builds_div  = document.getElementById( 'builds' );
+var ch_proj_div = document.getElementById( 'choose_proj' );
+var ch_targ_div = document.getElementById( 'choose_target' );
 var add_form    = document.getElementById( 'add_form' );
 var submit_form = document.getElementById( 'submit_form' );
 var file_input  = document.getElementById( 'file_input' );
@@ -7,65 +8,68 @@ var add_btn     = document.getElementById( 'add_files_btn' );
 var submit_btn  = document.getElementById( 'submit_files_btn' );
 var file_box    = document.getElementById( 'file_container' );
 
+var selected_project = null;
+var selected_target  = null;
+
 function loadDMCC()
 {
-    builds_div.innerHTML = "Retrieving build rules. 0%";
-    var builds_req = new XMLHttpRequest();
-    builds_req.addEventListener( "progress", buildsTxProgress, false );
-    builds_req.addEventListener( "load",     buildsTxComplete, false );
-    builds_req.addEventListener( "error",    buildsTxFailed,   false );
-    builds_req.addEventListener( "abort",    buildsTxCanceled, false );
-    builds_req.open( "get", "build_rules.json" );
-    builds_req.send();
+    ch_proj_div.innerHTML = "Retrieving proj rules. 0%";
+    var projs_req = new XMLHttpRequest();
+    projs_req.addEventListener( "progress", projsTxProgress, false );
+    projs_req.addEventListener( "load",     projsTxComplete, false );
+    projs_req.addEventListener( "error",    projsTxFailed,   false );
+    projs_req.addEventListener( "abort",    projsTxCanceled, false );
+    projs_req.open( "get", "build_rules.json" );
+    projs_req.send();
 }
 
 // progress on transfers from the server to the client (downloads)
-function buildsTxProgress( evt )
+function projsTxProgress( evt )
 {
     if( evt.lengthComputable )
     {
         var percentComplete = evt.loaded / evt.total;
         // console.log( percentComplete );
-        builds_div.innerHTML = "Retrieving build rules. "+
+        ch_proj_div.innerHTML = "Retrieving proj rules. "+
             ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
     }
     else
     {
-        builds_div.innerHTML = "Retrieving build rules. ???%";
+        ch_proj_div.innerHTML = "Retrieving proj rules. ???%";
     }
 }
 
-function buildsTxFailed( evt ) {
+function projsTxFailed( evt ) {
     alert("An error occurred while transferring the file.");
 }
 
-function buildsTxCanceled( evt ) {
+function projsTxCanceled( evt ) {
     alert("The transfer has been canceled by the user.");
 }
 
-function buildsTxComplete( evt ) {
+function projsTxComplete( evt ) {
     console.log( "The transfer is complete." );
     console.log( evt );
     console.log( this );
-    builds = JSON.parse( this.responseText );
-    console.log( builds );
-    removeAllChildren( builds_div );
-    for( var i = 0; i < builds.length; i++ )
+    projs = JSON.parse( this.responseText );
+    console.log( projs );
+    removeAllChildren( ch_proj_div );
+    for( var i = 0; i < projs.length; i++ )
     {
-        var id = "build_rule_"+i;
+        var id = "proj_rule_"+i;
         var lelem = document.createElement( "label" );
         lelem.for = id;
-        lelem.className = "build-item";
+        lelem.className = "proj-item";
         var ielem = document.createElement( "input" );
         ielem.id    = id;
         ielem.type  = "radio";
-        ielem.name  = "build_rule";
-        ielem.build_path = builds[i].path;
-        ielem.addEventListener( "click", makeBuildSelectionCallback( ielem ) );
+        ielem.name  = "proj_rule";
+        ielem.proj  = projs[i];
+        ielem.addEventListener( "click", makeProjSelectionCallback( ielem ) );
         var selem = document.createElement( "span" );
-        selem.innerHTML = builds[i].path;
+        selem.innerHTML = projs[i].path;
 
-        builds_div.appendChild( lelem );
+        ch_proj_div.appendChild( lelem );
         lelem.appendChild( ielem );
         lelem.appendChild( selem );
     }
@@ -74,15 +78,49 @@ function buildsTxComplete( evt ) {
 
 }
 
-function makeBuildSelectionCallback( elem )
+function makeProjSelectionCallback( elem )
 {
-    return function() { buildSelected( elem ); }
+    return function() { onProjSelect( elem ); }
 }
 
-function buildSelected( elem )
+function onProjSelect( elem )
 {
-    console.log( elem.build_path );
+    console.log( elem.proj.path );
     console.log( this );
+    removeAllChildren( ch_targ_div );
+    if( "targets" in elem.proj )
+    {
+        var targs = elem.proj.targets;
+        var list_elem = document.createElement( "select" );
+        list_elem.multiple = true;
+        for( var i = 0 ; i < targs.length; i++ )
+        {
+            var opt_elem = document.createElement( "option" );
+            opt_elem.innerHTML = targs[i].name;
+            opt_elem.target = targs[i];
+            opt_elem.addEventListener( "click",
+                                       makeTargetSelectionCallback( opt_elem ) );
+
+            list_elem.appendChild( opt_elem );
+        }
+        ch_targ_div.appendChild( list_elem );
+    }
+    else
+    {
+        ch_targ_div.innerHTML = "Sorry, no targets";
+    }
+}
+
+function makeTargetSelectionCallback( elem )
+{
+    return function() { onTargetSelect( elem ); }
+}
+
+function onTargetSelect( elem )
+{
+    console.log( elem.target.name );
+    console.log( this );
+    selected_target = elem.target;
 }
 
 add_form.onsubmit = function( evt )
