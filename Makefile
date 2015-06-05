@@ -8,8 +8,11 @@ Deploy/build_rules.json: Source/process_build_rules.py
 Deploy/%: Source/%
 	cp $< $@
 
-run_server: all
+run_server_old: all
 	cd Deploy && php -S localhost:8081
+
+run_server: all
+	cd Deploy && node ../Source/dmcc_server.js
 
 clean:
 	rm -f $(addprefix Deploy/, $(FILES_TO_SERVE))
