@@ -1,15 +1,16 @@
 var tag_filter  = document.getElementById( 'tag_filter' );
 var ch_proj_div = document.getElementById( 'choose_proj' );
 var ch_targ_div = document.getElementById( 'choose_target' );
-var add_form    = document.getElementById( 'add_form' );
 var submit_form = document.getElementById( 'submit_form' );
 var file_input  = document.getElementById( 'file_input' );
 var add_btn     = document.getElementById( 'add_files_btn' );
 var submit_btn  = document.getElementById( 'submit_files_btn' );
 var file_box    = document.getElementById( 'file_container' );
+var required_files = document.getElementById( 'required_files' );
 
 var selected_project = null;
 var selected_target  = null;
+var filesToSubmit = [];
 
 function loadDMCC()
 {
@@ -109,6 +110,8 @@ function onProjSelect( elem )
     {
         ch_targ_div.innerHTML = "Sorry, no targets";
     }
+    selected_target = null;
+    renderRequiredFiles();
 }
 
 function makeTargetSelectionCallback( elem )
@@ -118,24 +121,88 @@ function makeTargetSelectionCallback( elem )
 
 function onTargetSelect( elem )
 {
-    console.log( elem.target.name );
+    console.log( elem.target );
     console.log( this );
     selected_target = elem.target;
+    if( !( 'deps' in selected_target ) )
+    {
+        selected_target.deps = [];
+    }
+    renderRequiredFiles();
 }
 
-add_form.onsubmit = function( evt )
+function renderRequiredFiles()
 {
-    console.log( evt );
-    evt.preventDefault();
+    removeAllChildren( required_files );
+    if( selected_target === null )
+    {
+        return;
+    }
+    for( i = 0; i < selected_target.deps.length; i++ )
+    {
+        var dep = document.createElement( "div" );
+        var dep_txt = document.createElement( "p" );
+        var img = document.createElement( "img" );
+        img.src = "question-24.png";
+        dep.innerHTML = selected_target.deps[ i ];
+        dep.appendChild( img );
+        dep.appendChild( dep_txt );
+        required_files.appendChild( dep );
+    }
+}
 
+function onFilesSelected( elem )
+{
+    console.log( elem );
+    if( !( 'files' in elem ) )
+    {
+        console.log( "ERROR NO FILES" );
+        return;
+    }
     var files = file_input.files;
     for( var i = 0; i < files.length; i++ )
     {
-        var file_stuff = document.createElement( "p" );
-        file_stuff.innerHTML = files[i].name;
-        file_stuff.actual_file = files[i];
-        file_box.appendChild( file_stuff );
+        filesToSubmit.push( files[i] );
+        // TODO: It would be nice to be able to compare files to
+        // avoid duplicates. Not sure if that's possible
     }
+    renderFileList();
+}
+
+function renderFileList()
+{
+    removeAllChildren( file_box );
+    for( var i = 0; i < filesToSubmit.length; i++ )
+    {
+        var f = filesToSubmit[ i ];
+        var box = document.createElement( "div" );
+        var delete_btn = document.createElement( "img" );
+        delete_btn.src = "delete-24.png";
+        delete_btn.onclick = makeDeleteFileCallback( box, f )
+        var name = document.createElement( "span" );
+        name.innerHTML = f.name;
+        box.appendChild( delete_btn );
+        box.appendChild( name );
+        file_box.appendChild( box );
+    }
+}
+
+function makeDeleteFileCallback( div, file )
+{
+    return function() { onDeleteFile( div, file ); }
+}
+
+function onDeleteFile( div, file )
+{
+    for( var i = 0; i < filesToSubmit.length; i++ )
+    {
+        if( file == filesToSubmit[ i ] )
+        {
+            filesToSubmit.splice( i, 1 );
+            break;
+        }
+    }
+    renderFileList();
 }
 
 var submission_in_progress = false;

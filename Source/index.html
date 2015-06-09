@@ -20,13 +20,11 @@
 
   <div class="flex-item main_panel" id="targets">Choose a target:
     <div id="choose_target"></div>
+    <div id="required_files"></div>
   </div>
 
   <div class="flex-item main_panel" id="choose_files">
-    <form id="add_form" action="ERROR_DO_NOT_SUBMIT_FORM" method="POST">
-      <input id="file_input" type="file" name="file[]" multiple>
-      <button id="add_files_btn" type="submit">Remember Files and Add More</button>
-    </form>
+    <input onchange="onFilesSelected( this )" id="file_input" type="file" name="file[]" multiple >
   </div>
 
   <div class="flex-item main_panel" id="submit_files">
