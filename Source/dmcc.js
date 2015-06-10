@@ -1,31 +1,34 @@
-var tag_filter  = document.getElementById( 'tag_filter' );
-var ch_proj_div = document.getElementById( 'choose_proj' );
-var ch_targ_div = document.getElementById( 'choose_target' );
-var submit_form = document.getElementById( 'submit_form' );
-var file_input  = document.getElementById( 'file_input' );
-var add_btn     = document.getElementById( 'add_files_btn' );
-var submit_btn  = document.getElementById( 'submit_files_btn' );
-var file_box    = document.getElementById( 'file_container' );
+var tag_filter     = document.getElementById( 'tag_filter' );
+var ch_proj_div    = document.getElementById( 'choose_proj' );
+var ch_targ_div    = document.getElementById( 'choose_target' );
+var submit_form    = document.getElementById( 'submit_form' );
+var submit_btn     = document.getElementById( 'submission_button' );
+var file_input     = document.getElementById( 'file_input' );
+var file_box       = document.getElementById( 'file_container' );
 var required_files = document.getElementById( 'required_files' );
+var response_area  = document.getElementById( 'response_area' );
 
 var selected_project = null;
 var selected_target  = null;
-var filesToSubmit = [];
+var files_to_submit  = [];
+var project_list     = null;
+var submission_in_progress = false;
+var submission_id    = null;
 
-function loadDMCC()
+function onLoadDMCC()
 {
     ch_proj_div.innerHTML = "Retrieving proj rules. 0%";
     var projs_req = new XMLHttpRequest();
-    projs_req.addEventListener( "progress", projsTxProgress, false );
-    projs_req.addEventListener( "load",     projsTxComplete, false );
-    projs_req.addEventListener( "error",    projsTxFailed,   false );
-    projs_req.addEventListener( "abort",    projsTxCanceled, false );
+    projs_req.addEventListener( "progress", onProjListTxProgress, false );
+    projs_req.addEventListener( "load",     onProjListTxComplete, false );
+    projs_req.addEventListener( "error",    onProjListTxFailed,   false );
+    projs_req.addEventListener( "abort",    onProjListTxCanceled, false );
     projs_req.open( "get", "build_rules.json" );
     projs_req.send();
 }
 
 // progress on transfers from the server to the client (downloads)
-function projsTxProgress( evt )
+function onProjListTxProgress( evt )
 {
     if( evt.lengthComputable )
     {
@@ -40,41 +43,56 @@ function projsTxProgress( evt )
     }
 }
 
-function projsTxFailed( evt ) {
+function onProjListTxFailed( evt ) {
     alert("An error occurred while transferring the file.");
 }
 
-function projsTxCanceled( evt ) {
+function onProjListTxCanceled( evt ) {
     alert("The transfer has been canceled by the user.");
 }
 
-function projsTxComplete( evt ) {
-    console.log( "The transfer is complete." );
-    console.log( evt );
-    console.log( this );
-    projs = JSON.parse( this.responseText );
-    console.log( projs );
+function onProjListTxComplete( evt ) {
+    console.log( "Project list transfer complete." );
+    project_list = JSON.parse( this.responseText );
+    renderProjectList();
+}
+
+function renderProjectList()
+{
+    if( project_list === null )
+    {
+        // log error
+        return;
+    }
     removeAllChildren( ch_proj_div );
-    for( var i = 0; i < projs.length; i++ )
+    for( var i = 0; i < project_list.length; i++ )
     {
         var id = "proj_rule_"+i;
         var lelem = document.createElement( "label" );
         lelem.for = id;
-        lelem.className = "proj-item";
         var ielem = document.createElement( "input" );
         ielem.id    = id;
         ielem.type  = "radio";
         ielem.name  = "proj_rule";
-        ielem.proj  = projs[i];
-        ielem.addEventListener( "click", makeProjSelectionCallback( ielem ) );
-        var selem = document.createElement( "span" );
-        selem.innerHTML = projs[i].path;
-
-        ch_proj_div.appendChild( lelem );
+        ielem.proj  = project_list[i];
+        ielem.addEventListener(
+            "click", makeProjSelectionCallback( ielem ) );
+        var tags = project_list[i].tags;
         lelem.appendChild( ielem );
-        lelem.appendChild( selem );
+        for( var j = 0; j < tags.length; j++ )
+        {
+            var s = document.createElement( "span" );
+            s.className += " tag";
+            s.title = tags[ j ].kind;
+            s.innerHTML = tags[ j ].tag;
+            lelem.appendChild( s );
+            var space = document.createElement( "span" );
+            space.innerHTML = " ";
+            lelem.appendChild( space );
+        }
+        ch_proj_div.appendChild( lelem );
+        ch_proj_div.appendChild( document.createElement( 'br' ) );
     }
-
 // <input name="year" type="radio" value="F" onclick="alert('CS3')">
 
 }
@@ -108,7 +126,7 @@ function onProjSelect( elem )
     }
     else
     {
-        ch_targ_div.innerHTML = "Sorry, no targets";
+        ch_targ_div.innerHTML = "Sorry, that project has no targets";
     }
     selected_target = null;
     renderRequiredFiles();
@@ -138,17 +156,70 @@ function renderRequiredFiles()
     {
         return;
     }
-    for( i = 0; i < selected_target.deps.length; i++ )
+    var msg = document.createElement( 'p' );
+    if( selected_target.deps.length < 1 )
     {
-        var dep = document.createElement( "div" );
-        var dep_txt = document.createElement( "p" );
-        var img = document.createElement( "img" );
-        img.src = "question-24.png";
-        dep.innerHTML = selected_target.deps[ i ];
-        dep.appendChild( img );
-        dep.appendChild( dep_txt );
-        required_files.appendChild( dep );
+        msg.innerHTML = "No required files for this target";
+        required_files.appendChild( msg );
+        return;
     }
+    msg.innerHTML = "Required files for this target:";
+    required_files.appendChild( msg );
+    var list = document.createElement( 'ul' );
+    for( var i = 0; i < selected_target.deps.length; i++ )
+    {
+        var dep = document.createElement( 'li' );
+        dep.className += " monospace";
+        var dep_txt = document.createElement( 'span' );
+        var selected = false;
+        for( var j = 0; j < files_to_submit.length; j++ )
+        {
+            if( files_to_submit[ j ].name == selected_target.deps[ i ] )
+            {
+                selected = true;
+                break;
+            }
+        }
+        dep.className += selected ? " selected_file" : " unselected_file";
+        dep_txt.innerHTML = selected_target.deps[ i ];
+        dep.appendChild( dep_txt );
+        list.appendChild( dep );
+    }
+    required_files.appendChild( list );
+
+    var not_required = [];
+    for( var i = 0; i < files_to_submit.length; i++ )
+    {
+        var f = files_to_submit[ i ];
+        for( var j = 0; j < selected_target.deps.length; j++ )
+        {
+            if( f.name == selected_target.deps[ j ] )
+            {
+                f = null;
+                break;
+            }
+        }
+        if( f !== null )
+            not_required.push( f );
+    }
+    if( not_required.length < 1 )
+    {
+        return;
+    }
+    var msg = document.createElement( 'p' );
+    msg.innerHTML = "Selected files not required by this target:";
+    required_files.appendChild( msg );
+    var list2 = document.createElement( 'ul' );
+    for( var i = 0; i < not_required.length; i++ )
+    {
+        var nr = document.createElement( 'li' );
+        nr.className += " monospace";
+        var nr_txt = document.createElement( 'span' );
+        nr_txt.innerHTML = not_required[ i ].name;
+        nr.appendChild( nr_txt );
+        list2.appendChild( nr );
+    }
+    required_files.appendChild( list2 );
 }
 
 function onFilesSelected( elem )
@@ -162,66 +233,98 @@ function onFilesSelected( elem )
     var files = file_input.files;
     for( var i = 0; i < files.length; i++ )
     {
-        filesToSubmit.push( files[i] );
+        files_to_submit.push( files[i] );
         // TODO: It would be nice to be able to compare files to
         // avoid duplicates. Not sure if that's possible
     }
     renderFileList();
+    renderRequiredFiles();
 }
 
 function renderFileList()
 {
     removeAllChildren( file_box );
-    for( var i = 0; i < filesToSubmit.length; i++ )
+    if( files_to_submit.length < 1 )
     {
-        var f = filesToSubmit[ i ];
-        var box = document.createElement( "div" );
-        var delete_btn = document.createElement( "img" );
-        delete_btn.src = "delete-24.png";
-        delete_btn.onclick = makeDeleteFileCallback( box, f )
+        submit_btn.disabled = true;
+        var msg = document.createElement( 'p' );
+        msg.innerHTML = "No files selected";
+        file_box.appendChild( msg );
+        return;
+    }
+    // TODO: disable submission button unless all required files are there
+    submit_btn.disabled = false;
+    var list = document.createElement( 'ul' );
+    for( var i = 0; i < files_to_submit.length; i++ )
+    {
+        var f = files_to_submit[ i ];
+        var li = document.createElement( "li" );
+        li.className += " delete_me monospace";
+        li.addEventListener( "click", makeDeleteFileCallback( f ), false );
         var name = document.createElement( "span" );
         name.innerHTML = f.name;
-        box.appendChild( delete_btn );
-        box.appendChild( name );
-        file_box.appendChild( box );
+        li.appendChild( name );
+        list.appendChild( li );
     }
+    file_box.appendChild( list );
 }
 
-function makeDeleteFileCallback( div, file )
+function makeDeleteFileCallback( file )
 {
-    return function() { onDeleteFile( div, file ); }
+    return function() { onDeleteFile( file ); }
 }
 
-function onDeleteFile( div, file )
+function onDeleteFile( file )
 {
-    for( var i = 0; i < filesToSubmit.length; i++ )
+    for( var i = 0; i < files_to_submit.length; i++ )
     {
-        if( file == filesToSubmit[ i ] )
+        if( file == files_to_submit[ i ] )
         {
-            filesToSubmit.splice( i, 1 );
+            files_to_submit.splice( i, 1 );
             break;
         }
     }
     renderFileList();
+    renderRequiredFiles();
 }
 
-var submission_in_progress = false;
-
-function got_check_id()
+submit_form.onsubmit = function( evt )
 {
-    console.log( "GOT IT" );
-    console.log( this );
-    if( this.status === 200 )
+    evt.preventDefault();
+    if( submission_in_progress )
     {
-        // File(s) uploaded.
-        // uploadButton.innerHTML = 'Upload';
-    }
-    else
-    {
-        alert('An error occurred!');
+        alert( 'There is alread a submission in progress' );
         return;
     }
+    submission_in_progress = true;
+    response_area.innerHTML = "Submission in progress";
 
+    var id_req = new XMLHttpRequest();
+    id_req.addEventListener( "load",  onSubIdTxComplete, false );
+    id_req.addEventListener( "error", onSubIdTxFailed,   false );
+    id_req.addEventListener( "abort", onSubIdTxCanceled, false );
+    id_req.open( 'GET', 'submission_id_req?file_count='+files_to_submit.length );
+    id_req.send();
+}
+
+function onSubIdTxFailed( evt ) {
+    alert( "An error occurred while getting the submission ID." );
+}
+
+function onSubIdTxCanceled( evt ) {
+    alert( "The what??? has been canceled by the user." );
+}
+
+function onSubIdTxComplete( evt ) {
+    console.log( "Received submission ID: "+this.responseText );
+    submission_id = this.responseText;
+    renderProjectList();
+
+    if( this.status !== 200 )
+    {
+        alert( 'An error occurred!' );
+        return;
+    }
     
     var formData = new FormData();
     for( var i = 0; i < file_box.childNodes.length; i++ )
@@ -230,18 +333,6 @@ function got_check_id()
         console.log( file_box.childNodes[i] );
         formData.append( 'photos[]', elem.actual_file, elem.actual_file.name );
     }
-}
-
-submit_form.onsubmit = function( evt )
-{
-    console.log( evt );
-    evt.preventDefault();
-
-    var submission_in_progress = true;
-    var new_req = new XMLHttpRequest();
-    new_req.open( 'GET', 'new_req.php?file_count='+file_box.childNodes.length );
-    new_req.onload = got_check_id;
-    new_req.send();
 }
 
 /* Misc utils */

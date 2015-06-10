@@ -1,43 +1,59 @@
-#filter_box {
-    background-color: #DFFFFF;
+body {
+    background-color: #EFEFEF;
+}
+
+#column_container {
+    text-align: center;
 }
 
 #projs {
-    background-color: #FFDFFF;
+    background-color: #FFDFDF;
+    float: left;
+    width: 30%;
 }
 
 #targets {
-    background-color: #FFDFDF;
-}
-
-#choose_files {
-    display: flex;
-    background-color: #FFFFDF;
+    background-color: #FFFFBF;
+    display: inline-block;
+    width: 30%;
 }
 
 #submit_files {
-    display: flex;
-    background-color: #DFFFFD;
+    background-color: #DFDFFF;
+    float: right;
+    width: 38%;
 }
 
+#choose_proj {
+    line-height: 1.7;
+}
 
-.main_panel {
-    margin: 5px;
+.primary_column {
+    text-align: left;
     padding: 5px;
 }
 
-.container {
-    display: flex;
+.delete_me {
+    list-style-image: url( 'delete-24.png' );
+    vertical-align: middle;
 }
 
-.fixed {
-    width: 300px;
+.selected_file {
+    list-style-image: url( 'check_mark-24.png' );
+    vertical-align: middle;
 }
 
-.flex-item {
-    flex-grow: 1;
+.unselected_file {
+    list-style-image: url( 'question-24.png' );
+    vertical-align: middle;
 }
 
-.proj-item {
-    display: block;
+.tag {
+    padding:          3px;
+    background-color: white;
+    white-space:      nowrap;
+}
+
+.monospace {
+    font-family: monospace;
 }
