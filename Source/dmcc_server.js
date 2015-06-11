@@ -1,11 +1,13 @@
 // Comment ...
 
+var path         = require( 'path' );
 var finalhandler = require( 'finalhandler' );
 var http         = require( 'http' );
 var serveStatic  = require( 'serve-static' );
 var multiparty   = require( 'multiparty' );
 var util         = require( 'util' );
 var fs           = require( 'fs' );
+var mkdirp       = require( 'mkdirp' );
 
 function randomChar()
 {
@@ -139,7 +141,63 @@ function onFileSubmit( req, res )
 //   console.info('listening on http://0.0.0.0:'+PORT+'/');
 // });
 
+function sendSimpleResponse( res, code, body )
+{
+    res.writeHead( code, {
+        'Content-Length': body.length,
+        'Content-Type': 'text/plain' } );
+    res.write( body );
+    res.end();
+}
 
+function onSubId( req, res )
+{
+    var qs_params = req.url.split( "?" )[ 1 ].split( '&' );
+    var target = null;
+    for( var i = 0; i < qs_params.length; i++ )
+    {
+        var parts = qs_params[ i ].split( '=' );
+        if( decodeURIcomponent( parts[ 0 ] ) == 'target' )
+        {
+            target = decodeURIcomponent( parts[ 1 ] );
+        }
+    }
+    if( target === null )
+    {
+        sendSimpleResponse( res, 400, "No target specified" );
+        return;
+    }
+    var body = randomID( 8 );
+    var submission_dir = path.join( '..', 'Submissions', body );
+    mkdirp( submission_dir, function( err )
+        {
+            if( err )
+            {
+                console.error( err );
+                sendSimpleResponse(
+                    res, 500, "Failed to create submission directory" );
+                return;
+            }
+            var wr = fs.createWriteStream( path.join( submission_dir, 'targets' ) );
+            wr.on( "error", function( err )
+                {
+                    done( err );
+                } );
+            wr.on( "close", function( ex )
+                {
+                    done();
+                } );
+
+            wr.end( "" );
+
+
+            res.writeHead( 200, {
+                'Content-Length': body.length,
+                'Content-Type': 'text/plain' } );
+            res.write( body );
+            res.end();
+        } );
+}
 
 function serveDynamic( req, res )
 {
@@ -147,12 +205,7 @@ function serveDynamic( req, res )
     var submit_file  = req.url.indexOf( "file" );
     if( -1 < get_sub_code && get_sub_code < 2 )
     {
-        var body = randomID( 8 );
-        res.writeHead( 200, {
-            'Content-Length': body.length,
-            'Content-Type': 'text/plain' } );
-        res.write( body );
-        res.end();
+        onSubId( req, res );
     }
     else if( -1 < submit_file && submit_file < 2 )
     {

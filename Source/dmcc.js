@@ -104,12 +104,13 @@ function makeProjSelectionCallback( elem )
 
 function onProjSelect( elem )
 {
-    console.log( elem.proj.path );
+    selected_proj = elem.proj;
+    console.log( selected_proj.path );
     console.log( this );
     removeAllChildren( ch_targ_div );
-    if( "targets" in elem.proj )
+    if( "targets" in selected_proj )
     {
-        var targs = elem.proj.targets;
+        var targs = selected_proj.targets;
         var list_elem = document.createElement( "select" );
         list_elem.multiple = true;
         for( var i = 0 ; i < targs.length; i++ )
@@ -137,6 +138,7 @@ function makeTargetSelectionCallback( elem )
     return function() { onTargetSelect( elem ); }
 }
 
+// XXX Something is broken here wrt multiple target selection.
 function onTargetSelect( elem )
 {
     console.log( elem.target );
@@ -303,7 +305,10 @@ submit_form.onsubmit = function( evt )
     id_req.addEventListener( "load",  onSubIdTxComplete, false );
     id_req.addEventListener( "error", onSubIdTxFailed,   false );
     id_req.addEventListener( "abort", onSubIdTxCanceled, false );
-    id_req.open( 'GET', 'get_submission_id?file_count='+files_to_submit.length );
+    var qs = buildQueryString( [ [ 'file_count', files_to_submit.length ],
+                                 [ 'target', selected_target ],
+                                 [ 'path', selected_proj.path ] ] );
+    id_req.open( 'GET', 'get_submission_id' + qs );
     id_req.send();
 }
 
@@ -372,6 +377,23 @@ function onFileTxComplete( evt ) {
 }
 
 /* Misc utils */
+
+function buildQueryString( params )
+{
+    if( params.length < 1 )
+    {
+        return "";
+    }
+    var qs = "?";
+    for( var i = 0; i < params.length; i++ )
+    {
+        p = params[ i ];
+        qs += encodeURIComponent( ""+p[0] ) + "=";
+        qs += encodeURIComponent( ""+p[1] );
+        if( i + 1 < params.length )
+            qs += "&";
+    }
+}
 
 function removeAllChildren( elem )
 {
