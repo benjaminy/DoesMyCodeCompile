@@ -8,12 +8,12 @@ var file_box       = document.getElementById( 'file_container' );
 var required_files = document.getElementById( 'required_files' );
 var response_area  = document.getElementById( 'response_area' );
 
-var selected_project = null;
-var selected_target  = null;
-var files_to_submit  = [];
-var project_list     = null;
+var selected_project       = null;
+var selected_target        = null;
+var files_to_submit        = [];
+var project_list           = null;
 var submission_in_progress = false;
-var submission_id    = null;
+var submission_id          = null;
 
 function onLoadDMCC()
 {
@@ -303,7 +303,7 @@ submit_form.onsubmit = function( evt )
     id_req.addEventListener( "load",  onSubIdTxComplete, false );
     id_req.addEventListener( "error", onSubIdTxFailed,   false );
     id_req.addEventListener( "abort", onSubIdTxCanceled, false );
-    id_req.open( 'GET', 'submission_id_req?file_count='+files_to_submit.length );
+    id_req.open( 'GET', 'get_submission_id?file_count='+files_to_submit.length );
     id_req.send();
 }
 
@@ -319,20 +319,56 @@ function onSubIdTxComplete( evt ) {
     console.log( "Received submission ID: "+this.responseText );
     submission_id = this.responseText;
     renderProjectList();
-
     if( this.status !== 200 )
     {
         alert( 'An error occurred!' );
         return;
     }
-    
-    var formData = new FormData();
-    for( var i = 0; i < file_box.childNodes.length; i++ )
+
+    for( var i = 0; i < files_to_submit.length; i++ )
     {
-        var elem = file_box.childNodes[i];
-        console.log( file_box.childNodes[i] );
-        formData.append( 'photos[]', elem.actual_file, elem.actual_file.name );
+        var f = files_to_submit[ i ];
+        // console.log( f );
+        var file_req = new XMLHttpRequest();
+        file_req.addEventListener( "load",  onFileTxComplete, false );
+        file_req.addEventListener( "error", onFileTxFailed,   false );
+        file_req.addEventListener( "abort", onFileTxCanceled, false );
+        file_req.open( 'POST', 'file', true );
+        var form_data = new FormData();
+        form_data.append( 'submission_id', submission_id );
+        form_data.append( 'file', f, f.name );
+        file_req.send( form_data );
     }
+}
+
+// progress on transfers from the server to the client (downloads)
+function onFileTxProgress( evt )
+{
+    if( evt.lengthComputable )
+    {
+        var percentComplete = evt.loaded / evt.total;
+        // console.log( percentComplete );
+        //ch_proj_div.innerHTML = "Retrieving proj rules. "+
+        //    ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
+    }
+    else
+    {
+        //ch_proj_div.innerHTML = "Retrieving proj rules. ???%";
+    }
+}
+
+function onFileTxFailed( evt ) {
+    alert( "An error occurred while sending the file." );
+}
+
+function onFileTxCanceled( evt ) {
+    alert( "Sending has been canceled by the user." );
+}
+
+function onFileTxComplete( evt ) {
+    console.log( "File sending complete." );
+    // project_list = JSON.parse( this.responseText );
+    // renderProjectList();
 }
 
 /* Misc utils */

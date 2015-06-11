@@ -9,13 +9,13 @@ body {
 #projs {
     background-color: #FFDFDF;
     float: left;
-    width: 30%;
+    width: 29%;
 }
 
 #targets {
     background-color: #FFFFBF;
     display: inline-block;
-    width: 30%;
+    width: 29%;
 }
 
 #submit_files {
@@ -31,6 +31,7 @@ body {
 .primary_column {
     text-align: left;
     padding: 5px;
+    margin: 0px;
 }
 
 .delete_me {
