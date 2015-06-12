@@ -8,6 +8,7 @@ var multiparty   = require( 'multiparty' );
 var util         = require( 'util' );
 var fs           = require( 'fs' );
 var mkdirp       = require( 'mkdirp' );
+var qs           = require( 'querystring' );
 
 function randomChar()
 {
@@ -78,59 +79,9 @@ function onFileReceived( req, res, err, fields, files )
             return;
         }
         /* "else": */
-        try
-        {
-            var p = path.join( submission_dir, "expected_file_count.txt" );
-            var expected_files = parseInt( fs.readFileSync( p ).toString() );
-            if( isNaN( expected_files ) )
-                throw new Exception( 'num' );
-            p = path.join( submission_dir, "received_file_count.txt" );
-            var received_files = parseInt( fs.readFileSync( p ).toString() );
-            if( isNaN( expected_files ) )
-                throw new Exception( 'num' );
-        }
-        catch( e )
-        {
-        }
+        sendSimpleResponse( res, 200, "Received " + f.originalFilename );
     } );
-
-            // res.writeHead(200, {'content-type': 'text/plain'});
-            // res.write('received fields:\n\n '+util.inspect(fields));
-            // res.write('\n\n');
-            // res.end('received files:\n\n '+util.inspect(files));
-} //);
-
-
-    // var body = '';
-    // req.on( 'data', function( data )
-    //     {
-    //         // console.log( "WHEEE "+data );
-    //         body += data;
-
-    //         // Too much POST data, kill the connection!
-    //         if( body.length > 1e6 )
-    //             request.connection.destroy();
-    //     } );
-    // req.on( 'end', function ()
-    //     {
-    //         console.log( "A" );
-    //         console.log( body );
-    //         console.log( "B" );
-    //         // var post = qs.parse( body );
-    //         // console.log( "WHEEEEND "+post['name']+" "+post['file'] );
-    //         // console.log( post );
-    //         // for( field in post )
-    //         // {
-    //         //     console.log( "HUH "+field+" "+post[ field ] );
-    //         // }
-    //         // use post['blah'], etc.
-    //     } );
-    // res.writeHead( 200, {
-    //     'Content-Length': 3,
-    //     'Content-Type': 'text/plain' } );
-    // res.write( "..." );
-    // res.end();
-//}
+}
 
 function makeFileReceivedCallback( req, res )
 {
@@ -149,46 +100,16 @@ function onFileSubmit( req, res )
     form.parse( req, makeFileReceivedCallback( req, res ) );
 }
 
-
-
-
-// var http = require('http')
-//   , util = require('util')
-//   , multiparty = require('../')
-//   , PORT = process.env.PORT || 27372
-
-// var server = http.createServer(function(req, res) {
-//   } else if (req.url === '/upload') {
-//   } else {
-//     res.writeHead(404, {'content-type': 'text/plain'});
-//     res.end('404');
-//   }
-// });
-// server.listen(PORT, function() {
-//   console.info('listening on http://0.0.0.0:'+PORT+'/');
-// });
-
 function onSubId( req, res )
 {
-    console.log( req.url );
-    var qs_params = req.url.split( "?" )[ 1 ].split( '&' );
-    var target = null;
-    var mk_path = null;
-    for( var i = 0; i < qs_params.length; i++ )
+    var qs_params = qs.parse( req.url.split( "?" )[ 1 ] );
+    if( 'path' in qs_params )
     {
-        var parts = qs_params[ i ].split( '=' );
-        var key = decodeURIComponent( parts[ 0 ] );
-        var val = decodeURIComponent( parts[ 1 ] );
-        if( key == 'target' ) {
-            target = val;
-        }
-        if( key == 'path' ) {
-            mk_path = val;
-        }
+        var mk_path = qs_params.path;
     }
-    if( target === null || mk_path === null )
+    else
     {
-        sendSimpleResponse( res, 400, "No target and/or path specified" );
+        sendSimpleResponse( res, 400, "No makefile path specified" );
         return;
     }
     var body = randomID( 8 );
@@ -198,41 +119,48 @@ function onSubId( req, res )
         if( err )
         {
             console.error( err );
-            sendSimpleResponse(
-                res, 500, "Failed to create submission directory" );
+            sendSimpleResponse( res, 500, "Failed to create submission dir" );
             return;
         }
-        var wr = fs.createWriteStream( path.join( submission_dir, 'targets' ) );
-        wr.on( "error", function( err )
+        copyFile( path.join( '..', 'BuildRules', mk_path ),
+                  path.join( submission_dir, 'Makefile' ), function( err )
         {
-            console.error( err );
-            sendSimpleResponse( res, 500, "Failed to write target" );
-        } );
-        wr.on( "close", function( ex )
-        {
-            copyFile( path.join( '..', 'BuildRules', mk_path ),
-                      path.join( submission_dir, 'Makefile' ), function( err )
+            if( err )
             {
-                if( err )
-                {
-                    console.error( err );
-                    sendSimpleResponse( res, 500, "Error copying Makefile" );
-                }
-                else
-                {
-                    sendSimpleResponse( res, 200, body );
-                }
-            } );
+                console.error( err );
+                sendSimpleResponse( res, 500, "Error copying Makefile" );
+            }
+            else
+            {
+                sendSimpleResponse( res, 200, body );
+            }
         } );
-        wr.end( target );
-
     } );
+}
+
+function onBuildTarget( req, res )
+{
+    var qs_params = qs.parse( req.url.split( "?" )[ 1 ] );
+    if( 'submission_id' in qs_params && 'target' in qs_params )
+    {
+        var id = qs_params.submission_id;
+        var target = qs_params.target;
+    }
+    else
+    {
+        sendSimpleResponse( res, 400, "Need id and target" );
+        return;
+    }
+    console.log( "target" );
+    console.log( target );
+    sendSimpleResponse( res, 200, "You asked for "+target );
 }
 
 function serveDynamic( req, res )
 {
-    var get_sub_code = req.url.indexOf( "get_submission_id" );
-    var submit_file  = req.url.indexOf( "file" );
+    var get_sub_code = req.url.indexOf( "submission_init" );
+    var submit_file  = req.url.indexOf( "submit_file" );
+    var build_target = req.url.indexOf( "build_target" );
     if( -1 < get_sub_code && get_sub_code < 2 )
     {
         onSubId( req, res );
@@ -240,6 +168,10 @@ function serveDynamic( req, res )
     else if( -1 < submit_file && submit_file < 2 )
     {
         onFileSubmit( req, res );
+    }
+    else if( -1 < build_target && build_target < 2 )
+    {
+        onBuildTarget( req, res );
     }
     else
     {

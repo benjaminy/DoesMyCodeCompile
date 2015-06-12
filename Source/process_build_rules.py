@@ -15,6 +15,9 @@ MAKE_DIR    = os.path.join( DMCC_ROOT, "Build", "Make" )
 RULES_INFO  = os.path.join( DEPLOY_DIR, "build_rules.json" )
 WHITE_PUNCT = string.punctuation + string.whitespace
 
+# TODO:
+# make -rpn -f BuildRules/Examples/_simple_java01.mk | sed -n -e '/^$/ { n ; /^[^ ]*:/p; }'
+
 def clearMakeDir():
     process = subprocess.Popen( [ "git", "clean", "-f", "-x" ], cwd=MAKE_DIR )
     return process.wait()

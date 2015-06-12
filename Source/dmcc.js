@@ -305,10 +305,8 @@ submit_form.onsubmit = function( evt )
     id_req.addEventListener( "load",  onSubIdTxComplete, false );
     id_req.addEventListener( "error", onSubIdTxFailed,   false );
     id_req.addEventListener( "abort", onSubIdTxCanceled, false );
-    var qs = buildQueryString( [ [ 'file_count', files_to_submit.length ],
-                                 [ 'target', selected_target ],
-                                 [ 'path', selected_proj.path ] ] );
-    id_req.open( 'GET', 'get_submission_id' + qs );
+    var qs = buildQueryString( [ [ 'path', selected_proj.path ] ] );
+    id_req.open( 'GET', 'submission_init' + qs );
     id_req.send();
 }
 
@@ -335,10 +333,11 @@ function onSubIdTxComplete( evt ) {
         var f = files_to_submit[ i ];
         // console.log( f );
         var file_req = new XMLHttpRequest();
+        file_req.localRef = f;
         file_req.addEventListener( "load",  onFileTxComplete, false );
         file_req.addEventListener( "error", onFileTxFailed,   false );
         file_req.addEventListener( "abort", onFileTxCanceled, false );
-        file_req.open( 'POST', 'file', true );
+        file_req.open( 'POST', 'submit_file', true );
         var form_data = new FormData();
         form_data.append( 'submission_id', submission_id );
         form_data.append( 'file', f, f.name );
@@ -371,9 +370,46 @@ function onFileTxCanceled( evt ) {
 }
 
 function onFileTxComplete( evt ) {
-    console.log( "File sending complete." );
+    console.log( "File received " + this.localRef.name );
+    for( var i = 0; i < files_to_submit.length; i++ )
+    {
+        if( this.localRef == files_to_submit[ i ] )
+        {
+            files_to_submit.splice( i, 1 );
+            break;
+        }
+    }
+    if( files_to_submit.length < 1 )
+    {
+        alert( "Onward" );
+        onUploadsComplete();
+    }
     // project_list = JSON.parse( this.responseText );
     // renderProjectList();
+}
+
+function onUploadsComplete()
+{
+    var targ_req = new XMLHttpRequest();
+    targ_req.addEventListener( "load",  onTargTxComplete, false );
+    targ_req.addEventListener( "error", onTargTxFailed,   false );
+    targ_req.addEventListener( "abort", onTargTxCanceled, false );
+    var qs = buildQueryString( [ [ 'submission_id', submission_id ],
+                                 [ 'target', selected_target.name ] ] );
+    targ_req.open( 'GET', 'build_target' + qs, true );
+    targ_req.send();
+}
+
+function onTargTxFailed( evt ) {
+    alert( "An error occurred while sending the targ." );
+}
+
+function onTargTxCanceled( evt ) {
+    alert( "Sending has been canceled by the user." );
+}
+
+function onTargTxComplete( evt ) {
+    alert( this.responseText );
 }
 
 /* Misc utils */
