@@ -64,17 +64,41 @@ function onFileReceived( req, res, err, fields, files )
         res.end( "invalid request: " + err.message );
         return;
     }
-    var f = files.file[ 0 ];
-    copyFile( f.path, '/tmp/' + f.originalFilename, cb );
     console.log( 'received fields:\n\n ' + util.inspect(fields) );
     console.log( '\n\n');
     console.log( 'received files:\n\n ' + util.inspect(files) );
+    var f = files.file[ 0 ];
+    var id = fields.submission_id[ 0 ];
+    var submission_dir = path.join( '..', 'Submissions', id );
+    copyFile( f.path, path.join( submission_dir, f.originalFilename ), function( err )
+    {
+        if( err )
+        {
+            sendSimpleResponse( res, 500, "File copy error" )
+            return;
+        }
+        /* "else": */
+        try
+        {
+            var p = path.join( submission_dir, "expected_file_count.txt" );
+            var expected_files = parseInt( fs.readFileSync( p ).toString() );
+            if( isNaN( expected_files ) )
+                throw new Exception( 'num' );
+            p = path.join( submission_dir, "received_file_count.txt" );
+            var received_files = parseInt( fs.readFileSync( p ).toString() );
+            if( isNaN( expected_files ) )
+                throw new Exception( 'num' );
+        }
+        catch( e )
+        {
+        }
+    } );
 
             // res.writeHead(200, {'content-type': 'text/plain'});
             // res.write('received fields:\n\n '+util.inspect(fields));
             // res.write('\n\n');
             // res.end('received files:\n\n '+util.inspect(files));
-        } );
+} //);
 
 
     // var body = '';
@@ -106,11 +130,14 @@ function onFileReceived( req, res, err, fields, files )
     //     'Content-Type': 'text/plain' } );
     // res.write( "..." );
     // res.end();
-}
+//}
 
 function makeFileReceivedCallback( req, res )
 {
-    return function( err, fields, files ) { onFileReceived( req, res, err, fields, fields ); }
+    return function( err, fields, files )
+        {
+            onFileReceived( req, res, err, fields, files );
+        };
 }
 
 function onFileSubmit( req, res )
@@ -141,62 +168,65 @@ function onFileSubmit( req, res )
 //   console.info('listening on http://0.0.0.0:'+PORT+'/');
 // });
 
-function sendSimpleResponse( res, code, body )
-{
-    res.writeHead( code, {
-        'Content-Length': body.length,
-        'Content-Type': 'text/plain' } );
-    res.write( body );
-    res.end();
-}
-
 function onSubId( req, res )
 {
+    console.log( req.url );
     var qs_params = req.url.split( "?" )[ 1 ].split( '&' );
     var target = null;
+    var mk_path = null;
     for( var i = 0; i < qs_params.length; i++ )
     {
         var parts = qs_params[ i ].split( '=' );
-        if( decodeURIcomponent( parts[ 0 ] ) == 'target' )
-        {
-            target = decodeURIcomponent( parts[ 1 ] );
+        var key = decodeURIComponent( parts[ 0 ] );
+        var val = decodeURIComponent( parts[ 1 ] );
+        if( key == 'target' ) {
+            target = val;
+        }
+        if( key == 'path' ) {
+            mk_path = val;
         }
     }
-    if( target === null )
+    if( target === null || mk_path === null )
     {
-        sendSimpleResponse( res, 400, "No target specified" );
+        sendSimpleResponse( res, 400, "No target and/or path specified" );
         return;
     }
     var body = randomID( 8 );
     var submission_dir = path.join( '..', 'Submissions', body );
     mkdirp( submission_dir, function( err )
+    {
+        if( err )
         {
-            if( err )
-            {
-                console.error( err );
-                sendSimpleResponse(
-                    res, 500, "Failed to create submission directory" );
-                return;
-            }
-            var wr = fs.createWriteStream( path.join( submission_dir, 'targets' ) );
-            wr.on( "error", function( err )
-                {
-                    done( err );
-                } );
-            wr.on( "close", function( ex )
-                {
-                    done();
-                } );
-
-            wr.end( "" );
-
-
-            res.writeHead( 200, {
-                'Content-Length': body.length,
-                'Content-Type': 'text/plain' } );
-            res.write( body );
-            res.end();
+            console.error( err );
+            sendSimpleResponse(
+                res, 500, "Failed to create submission directory" );
+            return;
+        }
+        var wr = fs.createWriteStream( path.join( submission_dir, 'targets' ) );
+        wr.on( "error", function( err )
+        {
+            console.error( err );
+            sendSimpleResponse( res, 500, "Failed to write target" );
         } );
+        wr.on( "close", function( ex )
+        {
+            copyFile( path.join( '..', 'BuildRules', mk_path ),
+                      path.join( submission_dir, 'Makefile' ), function( err )
+            {
+                if( err )
+                {
+                    console.error( err );
+                    sendSimpleResponse( res, 500, "Error copying Makefile" );
+                }
+                else
+                {
+                    sendSimpleResponse( res, 200, body );
+                }
+            } );
+        } );
+        wr.end( target );
+
+    } );
 }
 
 function serveDynamic( req, res )
@@ -231,6 +261,18 @@ function runServer()
     server.listen( 8081 );
     console.log( "Does My Code Compile server listening." );
 }
+
+/* Misc utilities */
+
+function sendSimpleResponse( res, code, body )
+{
+    res.writeHead( code, {
+        'Content-Length': body.length,
+        'Content-Type': 'text/plain' } );
+    res.write( body );
+    res.end();
+}
+
 
 runServer();
 

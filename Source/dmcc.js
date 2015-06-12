@@ -393,6 +393,7 @@ function buildQueryString( params )
         if( i + 1 < params.length )
             qs += "&";
     }
+    return qs;
 }
 
 function removeAllChildren( elem )
