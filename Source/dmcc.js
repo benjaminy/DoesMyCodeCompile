@@ -6,11 +6,17 @@ var submit_btn     = document.getElementById( 'submission_button' );
 var file_input     = document.getElementById( 'file_input' );
 var file_box       = document.getElementById( 'file_container' );
 var required_files = document.getElementById( 'required_files' );
-var response_area  = document.getElementById( 'response_area' );
+var response_code  = document.getElementById( 'response_code' );
+var response_err   = document.getElementById( 'response_err' );
+var response_out   = document.getElementById( 'response_out' );
+
+var target_list = null;
+var target_radios = [];
 
 var selected_project       = null;
 var selected_target        = null;
 var files_to_submit        = [];
+var files_to_submit2       = [];
 var project_list           = null;
 var submission_in_progress = false;
 var submission_id          = null;
@@ -71,6 +77,7 @@ function renderProjectList()
         var lelem = document.createElement( "label" );
         lelem.for = id;
         var ielem = document.createElement( "input" );
+        target_radios.push( ielem );
         ielem.id    = id;
         ielem.type  = "radio";
         ielem.name  = "proj_rule";
@@ -111,8 +118,8 @@ function onProjSelect( elem )
     if( "targets" in selected_proj )
     {
         var targs = selected_proj.targets;
-        var list_elem = document.createElement( "select" );
-        list_elem.multiple = true;
+        target_list = document.createElement( "select" );
+        target_list.multiple = true;
         for( var i = 0 ; i < targs.length; i++ )
         {
             var opt_elem = document.createElement( "option" );
@@ -121,9 +128,9 @@ function onProjSelect( elem )
             opt_elem.addEventListener( "click",
                                        makeTargetSelectionCallback( opt_elem ) );
 
-            list_elem.appendChild( opt_elem );
+            target_list.appendChild( opt_elem );
         }
-        ch_targ_div.appendChild( list_elem );
+        ch_targ_div.appendChild( target_list );
     }
     else
     {
@@ -144,7 +151,15 @@ function onTargetSelect( elem )
     console.log( elem.target );
     console.log( this );
     selected_target = elem.target;
-    if( !( 'deps' in selected_target ) )
+    if( 'deps' in selected_target )
+    {
+        for( var i = 0; i < selected_target.deps.length; i++ )
+        {
+            var name = selected_target.deps[i];
+            selected_target.deps[i] = { name: name, satisfied: false };
+        }
+    }
+    else
     {
         selected_target.deps = [];
     }
@@ -170,39 +185,22 @@ function renderRequiredFiles()
     var list = document.createElement( 'ul' );
     for( var i = 0; i < selected_target.deps.length; i++ )
     {
-        var dep = document.createElement( 'li' );
-        dep.className += " monospace";
+        var dep_elem = document.createElement( 'li' );
+        dep_elem.className += " monospace";
         var dep_txt = document.createElement( 'span' );
-        var selected = false;
-        for( var j = 0; j < files_to_submit.length; j++ )
-        {
-            if( files_to_submit[ j ].name == selected_target.deps[ i ] )
-            {
-                selected = true;
-                break;
-            }
-        }
-        dep.className += selected ? " selected_file" : " unselected_file";
-        dep_txt.innerHTML = selected_target.deps[ i ];
-        dep.appendChild( dep_txt );
-        list.appendChild( dep );
+        var dep = selected_target.deps[ i ];
+        dep_elem.className += dep.satisfied ? " selected_file" : " unselected_file";
+        dep_txt.innerHTML = dep.name;
+        dep_elem.appendChild( dep_txt );
+        list.appendChild( dep_elem );
     }
     required_files.appendChild( list );
 
     var not_required = [];
     for( var i = 0; i < files_to_submit.length; i++ )
     {
-        var f = files_to_submit[ i ];
-        for( var j = 0; j < selected_target.deps.length; j++ )
-        {
-            if( f.name == selected_target.deps[ j ] )
-            {
-                f = null;
-                break;
-            }
-        }
-        if( f !== null )
-            not_required.push( f );
+        if( !files_to_submit[ i ].isRequired )
+            not_required.push( files_to_submit[ i ] );
     }
     if( not_required.length < 1 )
     {
@@ -235,6 +233,16 @@ function onFilesSelected( elem )
     var files = file_input.files;
     for( var i = 0; i < files.length; i++ )
     {
+        files[i].isRequired = false;
+        for( var j = 0; j < selected_target.deps.length; j++ )
+        {
+            if( selected_target.deps[ j ].name == files[ i ].name )
+            {
+                selected_target.deps[ j ].satisfied = true;
+                files[i].isRequired = true;
+                break;
+            }
+        }
         files_to_submit.push( files[i] );
         // TODO: It would be nice to be able to compare files to
         // avoid duplicates. Not sure if that's possible
@@ -246,16 +254,24 @@ function onFilesSelected( elem )
 function renderFileList()
 {
     removeAllChildren( file_box );
+    var all_satisfied = true;
+    for( var i = 0; i < selected_target.deps.length; i++ )
+    {
+        if( !selected_target.deps[ i ].satisfied )
+        {
+            all_satisfied = false;
+            break;
+        }
+    }
+    submit_btn.disabled = !all_satisfied;
+
     if( files_to_submit.length < 1 )
     {
-        submit_btn.disabled = true;
         var msg = document.createElement( 'p' );
         msg.innerHTML = "No files selected";
         file_box.appendChild( msg );
         return;
     }
-    // TODO: disable submission button unless all required files are there
-    submit_btn.disabled = false;
     var list = document.createElement( 'ul' );
     for( var i = 0; i < files_to_submit.length; i++ )
     {
@@ -278,11 +294,22 @@ function makeDeleteFileCallback( file )
 
 function onDeleteFile( file )
 {
+    if( submission_in_progress )
+        return;
+
     for( var i = 0; i < files_to_submit.length; i++ )
     {
         if( file == files_to_submit[ i ] )
         {
             files_to_submit.splice( i, 1 );
+            break;
+        }
+    }
+    for( var i = 0; i < selected_target.deps.length; i++ )
+    {
+        if( selected_target.deps[ i ].name == file.name )
+        {
+            selected_target.deps[ i ].satisfied = false;
             break;
         }
     }
@@ -299,7 +326,15 @@ submit_form.onsubmit = function( evt )
         return;
     }
     submission_in_progress = true;
-    response_area.innerHTML = "Submission in progress";
+    file_input.disabled = true;
+    submit_btn.disabled = true;
+    target_list.disabled = true;
+    for( var i = 0; i < target_radios.length; i++ )
+    {
+        target_radios[ i ].disabled = true;
+    }
+
+    response_out.innerHTML = "Submission in progress";
 
     var id_req = new XMLHttpRequest();
     id_req.addEventListener( "load",  onSubIdTxComplete, false );
@@ -328,6 +363,7 @@ function onSubIdTxComplete( evt ) {
         return;
     }
 
+    files_to_submit2 = files_to_submit.slice();
     for( var i = 0; i < files_to_submit.length; i++ )
     {
         var f = files_to_submit[ i ];
@@ -371,21 +407,18 @@ function onFileTxCanceled( evt ) {
 
 function onFileTxComplete( evt ) {
     console.log( "File received " + this.localRef.name );
-    for( var i = 0; i < files_to_submit.length; i++ )
+    for( var i = 0; i < files_to_submit2.length; i++ )
     {
-        if( this.localRef == files_to_submit[ i ] )
+        if( this.localRef == files_to_submit2[ i ] )
         {
-            files_to_submit.splice( i, 1 );
+            files_to_submit2.splice( i, 1 );
             break;
         }
     }
-    if( files_to_submit.length < 1 )
+    if( files_to_submit2.length < 1 )
     {
-        alert( "Onward" );
         onUploadsComplete();
     }
-    // project_list = JSON.parse( this.responseText );
-    // renderProjectList();
 }
 
 function onUploadsComplete()
@@ -409,10 +442,21 @@ function onTargTxCanceled( evt ) {
 }
 
 function onTargTxComplete( evt ) {
-    alert( this.responseText );
+    if( this.status == 200 )
+    {
+        var fun_stuff = JSON.parse( this.responseText );
+        response_code.innerHTML = "A"+fun_stuff.code;
+        response_err.innerHTML  = "B"+fun_stuff.errData;
+        response_out.innerHTML  = "C"+fun_stuff.outData;
+        alert( "Done" );
+    }
+    else
+    {
+        alert( "Target failed: " + this.responseText );
+    }
 }
 
-/* Misc utils */
+/* Utils */
 
 function buildQueryString( params )
 {

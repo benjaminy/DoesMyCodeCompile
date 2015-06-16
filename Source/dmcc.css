@@ -4,6 +4,8 @@ body {
 
 #column_container {
     text-align: center;
+    overflow: auto;
+    width: 100%;
 }
 
 #projs {
