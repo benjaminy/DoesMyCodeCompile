@@ -30,6 +30,16 @@ body {
     line-height: 1.7;
 }
 
+#build_success {
+    background-color: blue;
+    display: none;
+}
+
+#build_failure {
+    background-color: red;
+    display: none;
+}
+
 .primary_column {
     text-align: left;
     padding: 5px;

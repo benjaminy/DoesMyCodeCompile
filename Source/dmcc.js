@@ -9,6 +9,8 @@ var required_files = document.getElementById( 'required_files' );
 var response_code  = document.getElementById( 'response_code' );
 var response_err   = document.getElementById( 'response_err' );
 var response_out   = document.getElementById( 'response_out' );
+var build_success  = document.getElementById( 'build_success' );
+var build_failure  = document.getElementById( 'build_failure' );
 
 var target_list = null;
 var target_radios = [];
@@ -112,8 +114,6 @@ function makeProjSelectionCallback( elem )
 function onProjSelect( elem )
 {
     selected_proj = elem.proj;
-    console.log( selected_proj.path );
-    console.log( this );
     removeAllChildren( ch_targ_div );
     if( "targets" in selected_proj )
     {
@@ -148,8 +148,6 @@ function makeTargetSelectionCallback( elem )
 // XXX Something is broken here wrt multiple target selection.
 function onTargetSelect( elem )
 {
-    console.log( elem.target );
-    console.log( this );
     selected_target = elem.target;
     if( 'deps' in selected_target )
     {
@@ -224,7 +222,6 @@ function renderRequiredFiles()
 
 function onFilesSelected( elem )
 {
-    console.log( elem );
     if( !( 'files' in elem ) )
     {
         console.log( "ERROR NO FILES" );
@@ -326,9 +323,10 @@ submit_form.onsubmit = function( evt )
         return;
     }
     submission_in_progress = true;
-    file_input.disabled = true;
-    submit_btn.disabled = true;
-    target_list.disabled = true;
+    file_input.disabled    = true;
+    submit_btn.disabled    = true;
+    target_list.disabled   = true;
+    tag_filter.disabled    = true;
     for( var i = 0; i < target_radios.length; i++ )
     {
         target_radios[ i ].disabled = true;
@@ -356,7 +354,6 @@ function onSubIdTxCanceled( evt ) {
 function onSubIdTxComplete( evt ) {
     console.log( "Received submission ID: "+this.responseText );
     submission_id = this.responseText;
-    renderProjectList();
     if( this.status !== 200 )
     {
         alert( 'An error occurred!' );
@@ -367,7 +364,6 @@ function onSubIdTxComplete( evt ) {
     for( var i = 0; i < files_to_submit.length; i++ )
     {
         var f = files_to_submit[ i ];
-        // console.log( f );
         var file_req = new XMLHttpRequest();
         file_req.localRef = f;
         file_req.addEventListener( "load",  onFileTxComplete, false );
@@ -445,9 +441,16 @@ function onTargTxComplete( evt ) {
     if( this.status == 200 )
     {
         var fun_stuff = JSON.parse( this.responseText );
-        response_code.innerHTML = "A"+fun_stuff.code;
-        response_err.innerHTML  = "B"+fun_stuff.errData;
-        response_out.innerHTML  = "C"+fun_stuff.outData;
+        if( fun_stuff.code == 0 )
+        {
+            build_success.style.display = 'inline';
+        }
+        else
+        {
+            build_failure.style.display = 'inline';
+        }
+        response_err.innerHTML  = "Error output: "+fun_stuff.errData;
+        response_out.innerHTML  = "Informational output: "+fun_stuff.outData;
         alert( "Done" );
     }
     else
@@ -456,7 +459,7 @@ function onTargTxComplete( evt ) {
     }
 }
 
-/* Utils */
+/* Utilities */
 
 function buildQueryString( params )
 {
