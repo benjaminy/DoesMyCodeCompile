@@ -1,22 +1,5 @@
 // Comment ...
 
-// ROOT
-//   - Submissions/
-//     - X1Y2Z3/
-//       - SubmittedFiles/
-//         - x.java
-//         - y.py
-//         - z.c
-//       - targ1/
-//         - Build/
-//           [file copies]
-//           [Makefile copy]
-//         - Output/
-//           stdout.txt
-//           stderr.txt
-//       - Makefile
-//   - BuildRules
-
 var async        = require( 'async' );
 var path         = require( 'path' );
 var finalhandler = require( 'finalhandler' );

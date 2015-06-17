@@ -11,3 +11,21 @@ underscore will be the tag value; subsequent underscores will be
 replaced by spaces.  If there is no underscore, the entire string is the
 tag value and it will have no type/kind/class.
 
+ROOT
+  - Submissions/
+    - X1Y2Z3/
+      - SubmittedFiles/
+        - x.java
+        - y.py
+        - z.c
+      - Targets/
+        - targ1/
+          - Build/
+            [file copies]
+            [Makefile copy]
+          - Output/
+            stdout.txt
+            stderr.txt
+      - Makefile
+  - BuildRules
+

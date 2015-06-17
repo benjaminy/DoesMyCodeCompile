@@ -6,6 +6,7 @@ import os
 import subprocess
 import json
 import argparse
+import re
 
 DMCC_ROOT   = os.path.join( os.getcwd(), ".." )
 LOG_FILE    = open( "build_rules.log", "w" )
@@ -14,9 +15,6 @@ DEPLOY_DIR  = os.path.join( DMCC_ROOT, "Deploy" )
 MAKE_DIR    = os.path.join( DMCC_ROOT, "Build", "Make" )
 RULES_INFO  = os.path.join( DEPLOY_DIR, "build_rules.json" )
 WHITE_PUNCT = string.punctuation + string.whitespace
-
-# TODO:
-# make -rpn -f BuildRules/Examples/_simple_java01.mk | sed -n -e '/^$/ { n ; /^[^ ]*:/p; }'
 
 def clearMakeDir():
     process = subprocess.Popen( [ "git", "clean", "-f", "-x" ], cwd=MAKE_DIR )
@@ -65,14 +63,15 @@ else:
     print( "More recent build rule. Updating ...", file=LOG_FILE )
 
 def runMake( mkfile, target, extra_opts, cwd=None ):
+    targ_list = [] if target == "" else [ target ]
     # -s = silent (don't echo commands)
     # -f = provide makefile name
     if cwd is None:
-        m = [ "make" ] + extra_opts + [ "-s", "-f", mkfile, target ]
+        m = [ "make" ] + extra_opts + [ "-s", "-f", mkfile ] + targ_list
         process = subprocess.Popen( m,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     else:
-        m = [ "make" ] + extra_opts + [ "-s", "-f", mkfile, target ]
+        m = [ "make" ] + extra_opts + [ "-s", "-f", mkfile ] + targ_list
         process = subprocess.Popen( m, cwd=cwd,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     ( output_bytes, err_bytes ) = process.communicate()
@@ -115,8 +114,17 @@ def processMakefile( full_path, app_path, fname_tags ):
     proj[ "tags" ] = tags
 
     ( has_targs, targs_output, targs_err ) = runMake( full_path, "targets", [] )
+    target_names = ( targs_output.splitlines() if has_targs == 0 else [] )
+
+    r = re.compile( '^(visible_\S*)\s*:' )
+    with open( full_path ) as f:
+        for line in f.readlines():
+            m = r.match( line )
+            if m is not None:
+                target_names.append( m.group( 1 ) )
+
     targets = []
-    for target_name in ( targs_output.splitlines() if has_targs == 0 else [] ):
+    for target_name in target_names:
         target = { 'name': target_name }
         clearMakeDir()
         runMake( full_path, "init", [], cwd=MAKE_DIR )

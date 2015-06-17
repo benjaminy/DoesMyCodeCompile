@@ -123,7 +123,27 @@ function onProjSelect( elem )
         for( var i = 0 ; i < targs.length; i++ )
         {
             var opt_elem = document.createElement( "option" );
-            opt_elem.innerHTML = targs[i].name;
+            if( targs[i].name.startsWith( 'visible_' ) )
+            {
+                opt_elem.innerHTML = targs[i].name.substring( "visible_".length );
+            }
+            else
+            {
+                opt_elem.innerHTML = targs[i].name;
+            }
+            if( 'deps' in targs[i] )
+            {
+                for( var j = 0; j < targs[i].deps.length; j++ )
+                {
+                    var name = targs[i].deps[j];
+                    targs[i].deps[j] = { name: name, satisfied: false };
+                }
+            }
+            else
+            {
+                targs[i].deps = [];
+            }
+
             opt_elem.target = targs[i];
             opt_elem.addEventListener( "click",
                                        makeTargetSelectionCallback( opt_elem ) );
@@ -149,18 +169,6 @@ function makeTargetSelectionCallback( elem )
 function onTargetSelect( elem )
 {
     selected_target = elem.target;
-    if( 'deps' in selected_target )
-    {
-        for( var i = 0; i < selected_target.deps.length; i++ )
-        {
-            var name = selected_target.deps[i];
-            selected_target.deps[i] = { name: name, satisfied: false };
-        }
-    }
-    else
-    {
-        selected_target.deps = [];
-    }
     renderRequiredFiles();
 }
 
