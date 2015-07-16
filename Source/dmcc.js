@@ -1,31 +1,32 @@
-var tag_filter     = document.getElementById( 'tag_filter' );
-var ch_proj_div    = document.getElementById( 'choose_proj' );
-var ch_targ_div    = document.getElementById( 'choose_target' );
-var submit_form    = document.getElementById( 'submit_form' );
-var submit_btn     = document.getElementById( 'submission_button' );
-var file_input     = document.getElementById( 'file_input' );
-var file_box       = document.getElementById( 'file_container' );
-var required_files = document.getElementById( 'required_files' );
-var response_code  = document.getElementById( 'response_code' );
-var response_err   = document.getElementById( 'response_err' );
-var response_out   = document.getElementById( 'response_out' );
-var build_success  = document.getElementById( 'build_success' );
-var build_failure  = document.getElementById( 'build_failure' );
+var e_tag_filter     = document.getElementById( 'tag_filter' );
+var e_choose_proj    = document.getElementById( 'choose_proj' );
+var e_choose_targ    = document.getElementById( 'choose_target' );
+var e_submit_form    = document.getElementById( 'submit_form' );
+var e_submit_btn     = document.getElementById( 'submission_button' );
+var e_file_input     = document.getElementById( 'file_input' );
+var e_file_box       = document.getElementById( 'file_container' );
+var e_required_files = document.getElementById( 'required_files' );
+var e_response_err   = document.getElementById( 'response_err' );
+var e_response_out   = document.getElementById( 'response_out' );
+var e_build_success  = document.getElementById( 'build_success' );
+var e_build_failure  = document.getElementById( 'build_failure' );
 
 var target_list = null;
 var target_radios = [];
 
 var selected_project       = null;
-var selected_target        = null;
+var selected_targets       = [];
+var required_files         = [];
 var files_to_submit        = [];
 var files_to_submit2       = [];
 var project_list           = null;
 var submission_in_progress = false;
 var submission_id          = null;
+var targets_completed      = 0;
 
 function onLoadDMCC()
 {
-    ch_proj_div.innerHTML = "Retrieving proj rules. 0%";
+    e_choose_proj.innerHTML = "Retrieving proj rules. 0%";
     var projs_req = new XMLHttpRequest();
     projs_req.addEventListener( "progress", onProjListTxProgress, false );
     projs_req.addEventListener( "load",     onProjListTxComplete, false );
@@ -42,12 +43,12 @@ function onProjListTxProgress( evt )
     {
         var percentComplete = evt.loaded / evt.total;
         // console.log( percentComplete );
-        ch_proj_div.innerHTML = "Retrieving proj rules. "+
+        e_choose_proj.innerHTML = "Retrieving proj rules. "+
             ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
     }
     else
     {
-        ch_proj_div.innerHTML = "Retrieving proj rules. ???%";
+        e_choose_proj.innerHTML = "Retrieving proj rules. ???%";
     }
 }
 
@@ -72,7 +73,7 @@ function renderProjectList()
         // log error
         return;
     }
-    removeAllChildren( ch_proj_div );
+    removeAllChildren( e_choose_proj );
     for( var i = 0; i < project_list.length; i++ )
     {
         var id = "proj_rule_"+i;
@@ -99,8 +100,8 @@ function renderProjectList()
             space.innerHTML = " ";
             lelem.appendChild( space );
         }
-        ch_proj_div.appendChild( lelem );
-        ch_proj_div.appendChild( document.createElement( 'br' ) );
+        e_choose_proj.appendChild( lelem );
+        e_choose_proj.appendChild( document.createElement( 'br' ) );
     }
 // <input name="year" type="radio" value="F" onclick="alert('CS3')">
 
@@ -114,12 +115,13 @@ function makeProjSelectionCallback( elem )
 function onProjSelect( elem )
 {
     selected_proj = elem.proj;
-    removeAllChildren( ch_targ_div );
+    removeAllChildren( e_choose_targ );
     if( "targets" in selected_proj )
     {
         var targs = selected_proj.targets;
         target_list = document.createElement( "select" );
         target_list.multiple = true;
+        target_list.addEventListener( 'change', onTargetSelectChange );
         for( var i = 0 ; i < targs.length; i++ )
         {
             var opt_elem = document.createElement( "option" );
@@ -145,62 +147,77 @@ function onProjSelect( elem )
             }
 
             opt_elem.target = targs[i];
-            opt_elem.addEventListener( "click",
-                                       makeTargetSelectionCallback( opt_elem ) );
-
             target_list.appendChild( opt_elem );
         }
-        ch_targ_div.appendChild( target_list );
+        e_choose_targ.appendChild( target_list );
     }
     else
     {
-        ch_targ_div.innerHTML = "Sorry, that project has no targets";
+        e_choose_targ.innerHTML = "Sorry, that project has no targets";
     }
-    selected_target = null;
+    selected_targets = [];
     renderRequiredFiles();
 }
 
-function makeTargetSelectionCallback( elem )
+function onTargetSelectChange()
 {
-    return function() { onTargetSelect( elem ); }
-}
-
-// XXX Something is broken here wrt multiple target selection.
-function onTargetSelect( elem )
-{
-    selected_target = elem.target;
+    /* XXX What if files are already selected? */
+    selected_targets = [];
+    required_files = [];
+    for( var i = 0; i < target_list.length; i++ )
+    {
+        var opt_elem = target_list[i];
+        if( !opt_elem.selected )
+        {
+            continue;
+        }
+        selected_targets.push( opt_elem.target );
+        for( var j = 0; j < opt_elem.target.deps.length; j++ )
+        {
+            var d = opt_elem.target.deps[j];
+            var already_there = false;
+            for( var k = 0; k < required_files.length; k++ )
+            {
+                if( required_files[k].name == d.name )
+                {
+                    already_there = true;
+                    break;
+                }
+            }
+            if( !already_there )
+                required_files.push( d );
+        }
+    }
     renderRequiredFiles();
 }
 
 function renderRequiredFiles()
 {
-    removeAllChildren( required_files );
-    if( selected_target === null )
-    {
-        return;
-    }
+    removeAllChildren( e_required_files );
     var msg = document.createElement( 'p' );
-    if( selected_target.deps.length < 1 )
+    if( required_files.length < 1 )
     {
         msg.innerHTML = "No required files for this target";
-        required_files.appendChild( msg );
-        return;
+        e_required_files.appendChild( msg );
     }
-    msg.innerHTML = "Required files for this target:";
-    required_files.appendChild( msg );
-    var list = document.createElement( 'ul' );
-    for( var i = 0; i < selected_target.deps.length; i++ )
+    else
     {
-        var dep_elem = document.createElement( 'li' );
-        dep_elem.className += " monospace";
-        var dep_txt = document.createElement( 'span' );
-        var dep = selected_target.deps[ i ];
-        dep_elem.className += dep.satisfied ? " selected_file" : " unselected_file";
-        dep_txt.innerHTML = dep.name;
-        dep_elem.appendChild( dep_txt );
-        list.appendChild( dep_elem );
+        msg.innerHTML = "Required files for this target:";
+        e_required_files.appendChild( msg );
+        var list = document.createElement( 'ul' );
+        for( var i = 0; i < required_files.length; i++ )
+        {
+            var dep_elem = document.createElement( 'li' );
+            dep_elem.className += " monospace";
+            var dep_txt = document.createElement( 'span' );
+            var dep = required_files[i];
+            dep_elem.className += dep.satisfied ? " selected_file" : " unselected_file";
+            dep_txt.innerHTML = dep.name;
+            dep_elem.appendChild( dep_txt );
+            list.appendChild( dep_elem );
+        }
+        e_required_files.appendChild( list );
     }
-    required_files.appendChild( list );
 
     var not_required = [];
     for( var i = 0; i < files_to_submit.length; i++ )
@@ -214,7 +231,7 @@ function renderRequiredFiles()
     }
     var msg = document.createElement( 'p' );
     msg.innerHTML = "Selected files not required by this target:";
-    required_files.appendChild( msg );
+    e_required_files.appendChild( msg );
     var list2 = document.createElement( 'ul' );
     for( var i = 0; i < not_required.length; i++ )
     {
@@ -225,7 +242,7 @@ function renderRequiredFiles()
         nr.appendChild( nr_txt );
         list2.appendChild( nr );
     }
-    required_files.appendChild( list2 );
+    e_required_files.appendChild( list2 );
 }
 
 function onFilesSelected( elem )
@@ -235,15 +252,15 @@ function onFilesSelected( elem )
         console.log( "ERROR NO FILES" );
         return;
     }
-    var files = file_input.files;
+    var files = e_file_input.files;
     for( var i = 0; i < files.length; i++ )
     {
         files[i].isRequired = false;
-        for( var j = 0; j < selected_target.deps.length; j++ )
+        for( var j = 0; j < required_files.length; j++ )
         {
-            if( selected_target.deps[ j ].name == files[ i ].name )
+            if( required_files[ j ].name == files[ i ].name )
             {
-                selected_target.deps[ j ].satisfied = true;
+                required_files[ j ].satisfied = true;
                 files[i].isRequired = true;
                 break;
             }
@@ -258,23 +275,23 @@ function onFilesSelected( elem )
 
 function renderFileList()
 {
-    removeAllChildren( file_box );
+    removeAllChildren( e_file_box );
     var all_satisfied = true;
-    for( var i = 0; i < selected_target.deps.length; i++ )
+    for( var i = 0; i < required_files.length; i++ )
     {
-        if( !selected_target.deps[ i ].satisfied )
+        if( !required_files[ i ].satisfied )
         {
             all_satisfied = false;
             break;
         }
     }
-    submit_btn.disabled = !all_satisfied;
+    e_submit_btn.disabled = !all_satisfied;
 
     if( files_to_submit.length < 1 )
     {
         var msg = document.createElement( 'p' );
         msg.innerHTML = "No files selected";
-        file_box.appendChild( msg );
+        e_file_box.appendChild( msg );
         return;
     }
     var list = document.createElement( 'ul' );
@@ -289,7 +306,7 @@ function renderFileList()
         li.appendChild( name );
         list.appendChild( li );
     }
-    file_box.appendChild( list );
+    e_file_box.appendChild( list );
 }
 
 function makeDeleteFileCallback( file )
@@ -310,11 +327,11 @@ function onDeleteFile( file )
             break;
         }
     }
-    for( var i = 0; i < selected_target.deps.length; i++ )
+    for( var i = 0; i < required_files.length; i++ )
     {
-        if( selected_target.deps[ i ].name == file.name )
+        if( required_files[ i ].name == file.name )
         {
-            selected_target.deps[ i ].satisfied = false;
+            required_files[ i ].satisfied = false;
             break;
         }
     }
@@ -322,7 +339,7 @@ function onDeleteFile( file )
     renderRequiredFiles();
 }
 
-submit_form.onsubmit = function( evt )
+e_submit_form.onsubmit = function( evt )
 {
     evt.preventDefault();
     if( submission_in_progress )
@@ -331,35 +348,35 @@ submit_form.onsubmit = function( evt )
         return;
     }
     submission_in_progress = true;
-    file_input.disabled    = true;
-    submit_btn.disabled    = true;
+    e_file_input.disabled    = true;
+    e_submit_btn.disabled    = true;
     target_list.disabled   = true;
-    tag_filter.disabled    = true;
+    e_tag_filter.disabled    = true;
     for( var i = 0; i < target_radios.length; i++ )
     {
         target_radios[ i ].disabled = true;
     }
 
-    response_out.innerHTML = "Submission in progress";
+    e_response_out.innerHTML = "Submission in progress";
 
     var id_req = new XMLHttpRequest();
-    id_req.addEventListener( "load",  onSubIdTxComplete, false );
-    id_req.addEventListener( "error", onSubIdTxFailed,   false );
-    id_req.addEventListener( "abort", onSubIdTxCanceled, false );
+    id_req.addEventListener( "load",  onSubInitTxComplete, false );
+    id_req.addEventListener( "error", onSubInitTxFailed,   false );
+    id_req.addEventListener( "abort", onSubInitTxCanceled, false );
     var qs = buildQueryString( [ [ 'path', selected_proj.path ] ] );
     id_req.open( 'GET', 'submission_init' + qs );
     id_req.send();
 }
 
-function onSubIdTxFailed( evt ) {
+function onSubInitTxFailed( evt ) {
     alert( "An error occurred while getting the submission ID." );
 }
 
-function onSubIdTxCanceled( evt ) {
+function onSubInitTxCanceled( evt ) {
     alert( "The what??? has been canceled by the user." );
 }
 
-function onSubIdTxComplete( evt ) {
+function onSubInitTxComplete( evt ) {
     console.log( "Received submission ID: "+this.responseText );
     submission_id = this.responseText;
     if( this.status !== 200 )
@@ -392,12 +409,12 @@ function onFileTxProgress( evt )
     {
         var percentComplete = evt.loaded / evt.total;
         // console.log( percentComplete );
-        //ch_proj_div.innerHTML = "Retrieving proj rules. "+
+        //e_choose_proj.innerHTML = "Retrieving proj rules. "+
         //    ( 100.0 * percentComplete ).toFixed( 0 ) +"%";
     }
     else
     {
-        //ch_proj_div.innerHTML = "Retrieving proj rules. ???%";
+        //e_choose_proj.innerHTML = "Retrieving proj rules. ???%";
     }
 }
 
@@ -427,14 +444,19 @@ function onFileTxComplete( evt ) {
 
 function onUploadsComplete()
 {
-    var targ_req = new XMLHttpRequest();
-    targ_req.addEventListener( "load",  onTargTxComplete, false );
-    targ_req.addEventListener( "error", onTargTxFailed,   false );
-    targ_req.addEventListener( "abort", onTargTxCanceled, false );
-    var qs = buildQueryString( [ [ 'submission_id', submission_id ],
-                                 [ 'target', selected_target.name ] ] );
-    targ_req.open( 'GET', 'build_target' + qs, true );
-    targ_req.send();
+    for( var i = 0; i < selected_targets.length; i++ )
+    {
+        var targ_req = new XMLHttpRequest();
+        targ_req.addEventListener( "load",  onTargTxComplete, false );
+        targ_req.addEventListener( "error", onTargTxFailed,   false );
+        targ_req.addEventListener( "abort", onTargTxCanceled, false );
+        var qs = buildQueryString( [ [ 'submission_id', submission_id ],
+                                     [ 'target', selected_targets[i].name ] ] );
+        targ_req.open( 'GET', 'build_target' + qs, true );
+        targ_req.target = selected_targets[i];
+        alert( targ_req.target.name );
+        targ_req.send();
+    }
 }
 
 function onTargTxFailed( evt ) {
@@ -448,23 +470,33 @@ function onTargTxCanceled( evt ) {
 function onTargTxComplete( evt ) {
     if( this.status == 200 )
     {
-        var fun_stuff = JSON.parse( this.responseText );
-        if( fun_stuff.code == 0 )
+        targets_completed++;
+        alert( targets_completed );
+        if( targets_completed >= selected_targets.length )
         {
-            build_success.style.display = 'inline';
+            onTargetsComplete();
         }
-        else
-        {
-            build_failure.style.display = 'inline';
-        }
-        response_err.innerHTML  = "Error output: "+fun_stuff.errData;
-        response_out.innerHTML  = "Informational output: "+fun_stuff.outData;
-        alert( "Done" );
     }
     else
     {
         alert( "Target failed: " + this.responseText );
     }
+}
+
+function onTargetsComplete()
+{
+    // var fun_stuff = JSON.parse( this.responseText );
+    // if( fun_stuff.code == 0 )
+    // {
+    //     e_build_success.style.display = 'inline';
+    // }
+    // else
+    // {
+    //     e_build_failure.style.display = 'inline';
+    // }
+    // e_response_err.innerHTML  = "Error output: "+fun_stuff.errData;
+    // e_response_out.innerHTML  = "Informational output: "+fun_stuff.outData;
+    // alert( "Done" );
 }
 
 /* Utilities */

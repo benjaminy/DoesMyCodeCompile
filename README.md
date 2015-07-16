@@ -14,6 +14,7 @@ tag value and it will have no type/kind/class.
 ROOT
   - Submissions/
     - X1Y2Z3/
+      - Makefile
       - SubmittedFiles/
         - x.java
         - y.py
@@ -21,11 +22,15 @@ ROOT
       - Targets/
         - targ1/
           - Build/
-            [file copies]
-            [Makefile copy]
+            - [file copies]
+            - [Makefile copy]
           - Output/
-            stdout.txt
-            stderr.txt
-      - Makefile
-  - BuildRules
-
+            - code.txt
+            - stdout.txt
+            - stderr.txt
+  - BuildRules/
+  - Deploy/
+    - index.html
+    - dmcc.css
+    - Submissions/
+      X1Y2Z3.html
