@@ -12,6 +12,8 @@ var mkdirp       = require( 'mkdirp' );
 var qs           = require( 'querystring' );
 var child_proc   = require( 'child_process' );
 
+var clog = console.log;
+
 function onSubmissionInit( req, res )
 {
     var qs_params = qs.parse( req.url.split( "?" )[ 1 ] );
@@ -111,37 +113,42 @@ function onBuildTarget( req, res )
                       path.join( build_dir, "Makefile" ), cb ); },
         function( cb ) { fs.readdir( files_dir, cb ); },
         function( files, cb ) {
-            var fs = files.map( function( f ) { return path.join( files_dir, f ); } );
+            var fs = files.map(
+                function( f ) { return path.join( files_dir, f ); } );
             copyFiles( fs, build_dir, cb );
         },
         function( _, cb ) {
-            out_names = [ 'stdout.txt', 'stderr.txt', 'dev_stdout.txt', 'dev_stderr.txt' ];
-            out_paths = out_names.map( function( f ) { return path.join( output_dir, f ) } );
+            out_names = [
+                'stdout.txt', 'stderr.txt', 'dev_stdout.txt', 'dev_stderr.txt' ];
+            out_paths = out_names.map(
+                function( f ) { return path.join( output_dir, f ) } );
             async.map( out_paths, openWriteStream, cb );
         },
         function( f, cb ) {
             fds = f;
             runMake( fds[2], fds[3], 'init', build_dir, cb );
         },
-        function( code, sig, cb ) { runMake( fds[0], fds[1], target, build_dir, cb ); },
+        function( code, sig, cb ) {
+            runMake( fds[0], fds[1], target, build_dir, cb ); },
         function( code, sig, cb ) {
             res.build_code = code;
             async.map( fds, fs.close, cb );
         },
-        function( _, cb ) { fs.readFile( path.join( output_dir, 'stderr.txt' ), cb ); },
+        function( _, cb ) {
+            fs.readFile( path.join( output_dir, 'stderr.txt' ), cb ); },
         function( data, cb ) {
             res.errData = data;
-            console.log( data );
+            clog( data );
             fs.readFile( path.join( output_dir, 'stdout.txt' ), cb );
         },
         function( data, cb ) {
             res.outData = data;
-            console.log( data );
+            clog( data );
             cb();
         }
     ],
         function( err ) {
-            console.log( 'MIRACLE' );
+            clog( 'MIRACLE' );
             if( err )
             {
                 sendSimpleResponse( res, 500, "Failed to run target "+target );
@@ -193,7 +200,7 @@ function runServer()
 {
     var server = http.createServer( onRequest );
     server.listen( 8081 );
-    console.log( "Does My Code Compile server listening." );
+    clog( "Does My Code Compile server listening." );
 }
 
 /* Utilities */
@@ -204,7 +211,7 @@ function openWriteStream( p, cb ) {
     ws.on( 'error', function( err ) { cb( err ); } );
 }
 
-function runMake( ofd, efd, t, d, cb )
+function runMake( ofd, efd, target, cwd, cb )
 {
     var done = false;
     function after( err, code, sig )
@@ -216,7 +223,8 @@ function runMake( ofd, efd, t, d, cb )
     }
 
     var io = [ 0, ofd, efd ];
-    var p = child_proc.spawn( 'gtimeout', [ '10s', 'make', t ], { cwd: d, stdio: io } );
+    var p = child_proc.spawn(
+        'gtimeout', [ '10s', 'make', target ], { cwd: cwd, stdio: io } );
     p.on( 'error', after );
     p.on( 'exit', function( code, sig ) { after( null, code, sig ); } );
 }

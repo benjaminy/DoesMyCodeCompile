@@ -6,10 +6,7 @@ var e_submit_btn     = document.getElementById( 'submission_button' );
 var e_file_input     = document.getElementById( 'file_input' );
 var e_file_box       = document.getElementById( 'file_container' );
 var e_required_files = document.getElementById( 'required_files' );
-var e_response_err   = document.getElementById( 'response_err' );
-var e_response_out   = document.getElementById( 'response_out' );
-var e_build_success  = document.getElementById( 'build_success' );
-var e_build_failure  = document.getElementById( 'build_failure' );
+var e_response_area  = document.getElementById( 'response_area' );
 
 var target_list = null;
 var target_radios = [];
@@ -112,6 +109,18 @@ function makeProjSelectionCallback( elem )
     return function() { onProjSelect( elem ); }
 }
 
+function strip_visible( s )
+{
+    if( s.startsWith( 'visible_' ) )
+    {
+        return s.substring( "visible_".length );
+    }
+    else
+    {
+        return s;
+    }
+}
+
 function onProjSelect( elem )
 {
     selected_proj = elem.proj;
@@ -125,14 +134,7 @@ function onProjSelect( elem )
         for( var i = 0 ; i < targs.length; i++ )
         {
             var opt_elem = document.createElement( "option" );
-            if( targs[i].name.startsWith( 'visible_' ) )
-            {
-                opt_elem.innerHTML = targs[i].name.substring( "visible_".length );
-            }
-            else
-            {
-                opt_elem.innerHTML = targs[i].name;
-            }
+            opt_elem.innerHTML = strip_visible( targs[i].name );
             if( 'deps' in targs[i] )
             {
                 for( var j = 0; j < targs[i].deps.length; j++ )
@@ -357,7 +359,7 @@ e_submit_form.onsubmit = function( evt )
         target_radios[ i ].disabled = true;
     }
 
-    e_response_out.innerHTML = "Submission in progress";
+    e_response_area.innerHTML = "Submission in progress";
 
     var id_req = new XMLHttpRequest();
     id_req.addEventListener( "load",  onSubInitTxComplete, false );
@@ -444,19 +446,17 @@ function onFileTxComplete( evt ) {
 
 function onUploadsComplete()
 {
-    for( var i = 0; i < selected_targets.length; i++ )
-    {
-        var targ_req = new XMLHttpRequest();
-        targ_req.addEventListener( "load",  onTargTxComplete, false );
-        targ_req.addEventListener( "error", onTargTxFailed,   false );
-        targ_req.addEventListener( "abort", onTargTxCanceled, false );
-        var qs = buildQueryString( [ [ 'submission_id', submission_id ],
-                                     [ 'target', selected_targets[i].name ] ] );
-        targ_req.open( 'GET', 'build_target' + qs, true );
-        targ_req.target = selected_targets[i];
-        alert( targ_req.target.name );
-        targ_req.send();
-    }
+    var target = selected_targets[ targets_completed ];
+    var targ_req = new XMLHttpRequest();
+    targ_req.addEventListener( "load",  onTargTxComplete, false );
+    targ_req.addEventListener( "error", onTargTxFailed,   false );
+    targ_req.addEventListener( "abort", onTargTxCanceled, false );
+    var qs = buildQueryString( [ [ 'submission_id', submission_id ],
+                                 [ 'target', target.name ] ] );
+    targ_req.open( 'GET', 'build_target' + qs, true );
+    targ_req.target = target;
+    console.log( targ_req.target.name );
+    targ_req.send();
 }
 
 function onTargTxFailed( evt ) {
@@ -470,17 +470,74 @@ function onTargTxCanceled( evt ) {
 function onTargTxComplete( evt ) {
     if( this.status == 200 )
     {
-        targets_completed++;
-        alert( targets_completed );
-        if( targets_completed >= selected_targets.length )
+        result = JSON.parse( this.responseText );
+        var e_code = document.createElement( "div" );
+        if( result.code === 0 )
         {
-            onTargetsComplete();
+            var e_s1 = document.createElement( "span" );
+            var e_s2 = document.createElement( "span" );
+            var e_s3 = document.createElement( "span" );
+            e_s2.className += " monospace";
+            e_s1.innerHTML = "Target ";
+            e_s2.innerHTML = strip_visible( this.target.name );
+            e_s3.innerHTML = " completed without error";
+            e_code.appendChild( e_s1 );
+            e_code.appendChild( e_s2 );
+            e_code.appendChild( e_s3 );
+            e_code.className += " build_success";
         }
+        else
+        {
+            e_code.innerHTML =
+                "Target "+this.target.name+" completed with error code "+result.code;
+        }
+        e_response_area.appendChild( e_code );
+        e_response_area.appendChild( document.createElement( "br" ) );
+
+        var e_outA = document.createElement( "div" );
+        e_outA.innerHTML = "Normal output of the target:";
+        e_response_area.appendChild( e_outA );
+
+        var e_out = document.createElement( "div" );
+        e_out.className += " monospace";
+        e_out.innerHTML = result.outData
+        e_response_area.appendChild( e_out );
+        e_response_area.appendChild( document.createElement( "br" ) );
+
+        var e_errA = document.createElement( "div" );
+        e_errA.innerHTML = "Error output of the target:";
+        e_response_area.appendChild( e_errA );
+
+        var e_err = document.createElement( "div" );
+        if( result.errData === "" )
+        {
+            e_err.innerHTML = "[ None ]";
+        }
+        else
+        {
+            e_err.className += " monospace";
+            e_err.innerHTML = result.errData;
+        }
+        e_response_area.appendChild( e_err );
     }
     else
     {
-        alert( "Target failed: " + this.responseText );
+        var err = document.createElement( "div" );
+        err.innerHTML = "Server error!!! "+this.status;
+        e_response_area.appendChild( err );
+        var div = document.createElement( "div" );
+        // li.className += " delete_me monospace";
+        div.innerHTML = this.responseText;
+        e_response_area.appendChild( div );
     }
+
+    targets_completed++;
+    if( targets_completed >= selected_targets.length )
+    {
+        onTargetsComplete();
+    }
+    else
+        onUploadsComplete();
 }
 
 function onTargetsComplete()

@@ -10,15 +10,18 @@
 <div id="column_container">
 
 <div class="primary_column" id="projs">
-  <p>Filter projects/exercises/assignments by tags (Doesn't work yet):</p>
+  <p><span class="really_big">1. </span>
+     <span class="instructions">Choose a project:</span></p>
+  <hr>
+  <p><span class="instructions">Filter projects/exercises/assignments by tags (Doesn't work yet):</span></p>
   <input id="tag_filter" type="text" value="" onchange="alert('g2014-2015')">
   <hr>
-  <p>Choose a project:</p>
   <div id="choose_proj"></div>
 </div>
 
 <div class="primary_column" id="targets">
-  <p>Choose a target (or multiple targets):</p>
+  <p><span class="really_big">2. </span>
+     <span class="instructions">Choose a target (or multiple targets):</span></p>
   <div id="choose_target">
     <p>[Select a project first]</p>
   </div>
@@ -27,12 +30,14 @@
 </div>
 
 <div class="primary_column" id="submit_files">
-  <p>Add files for your submission:</p>
+  <p><span class="really_big">3. </span>
+     <span class="instructions">Add files for your submission:</span></p>
   <div><input onchange="onFilesSelected( this )" id="file_input" type="file" name="file[]" multiple ></div>
-  <hr/>
-  <p>Your selected files:</p>
+  <hr>
+  <p><span class="instructions">Your selected files:</span></p>
   <form id="submit_form" action="ERROR_DO_NOT_SUBMIT_FORM" method="POST">
     <div id="file_container"><p>No files selected</p></div>
+    <span class="really_big">4. </span>
     <button id="submission_button" type="submit" disabled="true">Submit Files</button>
   </form>
 </div>
@@ -42,14 +47,16 @@
 <hr>
 
 <div id="response_area">
-  <div id="response_code">
-    <span id="build_success">The build worked! Huzzah!</span>
-    <span id="build_failure">The build did not work. See feedback below.</span>
-  </div>
-  <div id="response_err"></div>
-  <div id="response_out"></div>
 </div>
 
 <script type="text/javascript" src="dmcc.js"></script>
 </body>
 </html>
+
+
+  <!-- <div id="response_code"> -->
+  <!--   <span id="build_success">The build worked! Huzzah!</span> -->
+  <!--   <span id="build_failure">The build did not work. See feedback below.</span> -->
+  <!-- </div> -->
+  <!-- <div id="response_err"></div> -->
+  <!-- <div id="response_out"></div> -->

@@ -34,3 +34,7 @@ ROOT
     - dmcc.css
     - Submissions/
       X1Y2Z3.html
+
+Install:
+
+brew install coreutils

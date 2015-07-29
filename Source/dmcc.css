@@ -30,12 +30,12 @@ body {
     line-height: 1.7;
 }
 
-#build_success {
-    background-color: blue;
-    display: none;
+.build_success {
+    background-color: lightblue;
+    /* display: none; */
 }
 
-#build_failure {
+.build_failure {
     background-color: red;
     display: none;
 }
@@ -69,4 +69,12 @@ body {
 
 .monospace {
     font-family: monospace;
+}
+
+.really_big {
+    font-size: xx-large;
+}
+
+.instructions {
+    font-family: sans-serif;
 }
