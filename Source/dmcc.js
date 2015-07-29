@@ -468,6 +468,15 @@ function onTargTxCanceled( evt ) {
 }
 
 function onTargTxComplete( evt ) {
+    if( targets_completed === 0 )
+    {
+        removeAllChildren( e_response_area );
+    }
+    else
+    {
+        e_response_area.appendChild( document.createElement( "hr" ) );
+    }
+
     if( this.status == 200 )
     {
         result = JSON.parse( this.responseText );
@@ -498,27 +507,21 @@ function onTargTxComplete( evt ) {
         e_outA.innerHTML = "Normal output of the target:";
         e_response_area.appendChild( e_outA );
 
-        var e_out = document.createElement( "div" );
-        e_out.className += " monospace";
+        var e_out = document.createElement( "pre" );
         e_out.innerHTML = result.outData
         e_response_area.appendChild( e_out );
         e_response_area.appendChild( document.createElement( "br" ) );
 
-        var e_errA = document.createElement( "div" );
-        e_errA.innerHTML = "Error output of the target:";
-        e_response_area.appendChild( e_errA );
+        if( result.errData !== "" )
+        {
+            var e_errA = document.createElement( "div" );
+            e_errA.innerHTML = "Error output of the target:";
+            e_response_area.appendChild( e_errA );
 
-        var e_err = document.createElement( "div" );
-        if( result.errData === "" )
-        {
-            e_err.innerHTML = "[ None ]";
-        }
-        else
-        {
-            e_err.className += " monospace";
+            var e_err = document.createElement( "pre" );
             e_err.innerHTML = result.errData;
+            e_response_area.appendChild( e_err );
         }
-        e_response_area.appendChild( e_err );
     }
     else
     {
