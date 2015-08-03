@@ -489,7 +489,7 @@ function onTargTxComplete( evt ) {
             e_s2.className += " monospace";
             e_s1.innerHTML = "Target ";
             e_s2.innerHTML = strip_visible( this.target.name );
-            e_s3.innerHTML = " completed without error";
+            e_s3.innerHTML = " succeeded";
             e_code.appendChild( e_s1 );
             e_code.appendChild( e_s2 );
             e_code.appendChild( e_s3 );
@@ -497,8 +497,17 @@ function onTargTxComplete( evt ) {
         }
         else
         {
-            e_code.innerHTML =
-                "Target "+this.target.name+" completed with error code "+result.code;
+            var e_s1 = document.createElement( "span" );
+            var e_s2 = document.createElement( "span" );
+            var e_s3 = document.createElement( "span" );
+            e_s2.className += " monospace";
+            e_s1.innerHTML = "Target ";
+            e_s2.innerHTML = strip_visible( this.target.name );
+            e_s3.innerHTML = " failed with error code "+result.code;
+            e_code.appendChild( e_s1 );
+            e_code.appendChild( e_s2 );
+            e_code.appendChild( e_s3 );
+            e_code.className += " build_failure";
         }
         e_response_area.appendChild( e_code );
         e_response_area.appendChild( document.createElement( "br" ) );

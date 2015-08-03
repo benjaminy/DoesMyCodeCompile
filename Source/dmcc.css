@@ -36,8 +36,8 @@ body {
 }
 
 .build_failure {
-    background-color: red;
-    display: none;
+    background-color: lightred;
+    /* display: none; */
 }
 
 .primary_column {
