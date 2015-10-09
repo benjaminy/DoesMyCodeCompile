@@ -82,8 +82,7 @@ function renderProjectList()
         ielem.type  = "radio";
         ielem.name  = "proj_rule";
         ielem.proj  = project_list[i];
-        ielem.addEventListener(
-            "click", makeProjSelectionCallback( ielem ) );
+        ielem.addEventListener( "click", onProjSelect );
         var tags = project_list[i].tags;
         lelem.appendChild( ielem );
         for( var j = 0; j < tags.length; j++ )
@@ -104,11 +103,6 @@ function renderProjectList()
 
 }
 
-function makeProjSelectionCallback( elem )
-{
-    return function() { onProjSelect( elem ); }
-}
-
 function strip_visible( s )
 {
     if( s.startsWith( 'visible_' ) )
@@ -121,8 +115,9 @@ function strip_visible( s )
     }
 }
 
-function onProjSelect( elem )
+function onProjSelect( evt )
 {
+    var elem = evt.target;
     selected_proj = elem.proj;
     removeAllChildren( e_choose_targ );
     if( "targets" in selected_proj )
@@ -302,7 +297,8 @@ function renderFileList()
         var f = files_to_submit[ i ];
         var li = document.createElement( "li" );
         li.className += " delete_me monospace";
-        li.addEventListener( "click", makeDeleteFileCallback( f ), false );
+        li.fileObj = f;
+        li.addEventListener( "click", onDeleteFile );
         var name = document.createElement( "span" );
         name.innerHTML = f.name;
         li.appendChild( name );
@@ -311,13 +307,10 @@ function renderFileList()
     e_file_box.appendChild( list );
 }
 
-function makeDeleteFileCallback( file )
+function onDeleteFile( evt )
 {
-    return function() { onDeleteFile( file ); }
-}
-
-function onDeleteFile( file )
-{
+    var li = evt.target;
+    var file = li.fileObj;
     if( submission_in_progress )
         return;
 
